@@ -257,6 +257,16 @@ float CrossPointSettings::getReaderLineCompression() const {
         case WIDE:
           return 1.0f;
       }
+    case TAIPEISANS:
+      switch (lineSpacing) {
+        case TIGHT:
+          return 0.85f;
+        case NORMAL:
+        default:
+          return 0.90f;
+        case WIDE:
+          return 0.95f;
+      }
   }
 }
 
@@ -331,5 +341,8 @@ int CrossPointSettings::getReaderFontId() const {
         case EXTRA_LARGE:
           return OPENDYSLEXIC_14_FONT_ID;
       }
+    case TAIPEISANS:
+      // We only generated one size (16pt) for now to save space
+      return NOTOSANS_16_TC_FONT_ID;
   }
 }

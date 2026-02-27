@@ -195,77 +195,82 @@ void EpubReaderActivity::loop() {
 
   // When long-press chapter skip is disabled, turn pages on press instead of release.
   const bool usePressForPageTurn = !SETTINGS.longPressChapterSkip;
-  const bool prevTriggered = usePressForPageTurn ? (mappedInput.wasPressed(MappedInputManager::Button::PageBack) ||
-                                                    mappedInput.wasPressed(MappedInputManager::Button::Left))
-                                                 : (mappedInput.wasReleased(MappedInputManager::Button::PageBack) ||
-                                                    mappedInput.wasReleased(MappedInputManager::Button::Left));
   const bool powerPageTurn = SETTINGS.shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::PAGE_TURN &&
                              mappedInput.wasReleased(MappedInputManager::Button::Power);
-  const bool nextTriggered = usePressForPageTurn
-                                 ? (mappedInput.wasPressed(MappedInputManager::Button::PageForward) || powerPageTurn ||
-                                    mappedInput.wasPressed(MappedInputManager::Button::Right))
-                                 : (mappedInput.wasReleased(MappedInputManager::Button::PageForward) || powerPageTurn ||
-                                    mappedInput.wasReleased(MappedInputManager::Button::Right));
 
-  if (!prevTriggered && !nextTriggered) {
+  // Side buttons (Always +/- 1 page as requested)
+  const bool sidePrev = usePressForPageTurn ? mappedInput.wasPressed(MappedInputManager::Button::PageBack)
+                                            : mappedInput.wasReleased(MappedInputManager::Button::PageBack);
+  const bool sideNext = usePressForPageTurn ? (mappedInput.wasPressed(MappedInputManager::Button::PageForward) || powerPageTurn)
+                                            : (mappedInput.wasReleased(MappedInputManager::Button::PageForward) || powerPageTurn);
+
+  // Front buttons (Consistent 10-page skip as requested)
+  const bool frontLeft = mappedInput.wasReleased(MappedInputManager::Button::Left);
+  const bool frontRight = mappedInput.wasReleased(MappedInputManager::Button::Right);
+
+  if (!sidePrev && !sideNext && !frontLeft && !frontRight) {
     return;
   }
 
-  // any botton press when at end of the book goes back to the last page
-  if (currentSpineIndex > 0 && currentSpineIndex >= epub->getSpineItemsCount()) {
-    currentSpineIndex = epub->getSpineItemsCount() - 1;
-    nextPageNumber = UINT16_MAX;
-    requestUpdate();
-    return;
-  }
-
-  const bool skipChapter = SETTINGS.longPressChapterSkip && mappedInput.getHeldTime() > skipChapterMs;
-
-  if (skipChapter) {
-    // We don't want to delete the section mid-render, so grab the semaphore
-    {
-      RenderLock lock(*this);
-      nextPageNumber = 0;
-      currentSpineIndex = nextTriggered ? currentSpineIndex + 1 : currentSpineIndex - 1;
-      section.reset();
+  // Action Routing
+  if (frontLeft || frontRight) {
+    // Front Buttons: 10 Page Skip
+    if (!section) {
+      requestUpdate();
+      return;
     }
-    requestUpdate();
-    return;
-  }
+    int delta = frontRight ? 10 : -10;
+    int targetPage = section->currentPage + delta;
 
-  // No current section, attempt to rerender the book
-  if (!section) {
-    requestUpdate();
-    return;
-  }
-
-  if (prevTriggered) {
-    if (section->currentPage > 0) {
-      section->currentPage--;
-    } else if (currentSpineIndex > 0) {
-      // We don't want to delete the section mid-render, so grab the semaphore
-      {
+    if (targetPage < 0) {
+      if (currentSpineIndex > 0) {
+        RenderLock lock(*this);
+        nextPageNumber = UINT16_MAX;
+        currentSpineIndex--;
+        section.reset();
+      } else {
+        section->currentPage = 0;
+      }
+    } else if (targetPage >= section->pageCount) {
+      if (currentSpineIndex < epub->getSpineItemsCount() - 1) {
+        RenderLock lock(*this);
+        nextPageNumber = 0;
+        currentSpineIndex++;
+        section.reset();
+      } else {
+        section->currentPage = section->pageCount - 1;
+      }
+    } else {
+      section->currentPage = targetPage;
+    }
+  } else if (sidePrev || sideNext) {
+    // Side Buttons: Normal Page Turn
+    if (!section) {
+      requestUpdate();
+      return;
+    }
+    if (sidePrev) {
+      if (section->currentPage > 0) {
+        section->currentPage--;
+      } else if (currentSpineIndex > 0) {
         RenderLock lock(*this);
         nextPageNumber = UINT16_MAX;
         currentSpineIndex--;
         section.reset();
       }
-    }
-    requestUpdate();
-  } else {
-    if (section->currentPage < section->pageCount - 1) {
-      section->currentPage++;
     } else {
-      // We don't want to delete the section mid-render, so grab the semaphore
-      {
+      if (section->currentPage < section->pageCount - 1) {
+        section->currentPage++;
+      } else {
         RenderLock lock(*this);
         nextPageNumber = 0;
         currentSpineIndex++;
         section.reset();
       }
     }
-    requestUpdate();
   }
+
+  requestUpdate();
 }
 
 void EpubReaderActivity::onReaderMenuBack(const uint8_t orientation) {

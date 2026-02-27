@@ -224,6 +224,16 @@ void GfxRenderer::drawText(const int fontId, const int x, const int y, const cha
     return;
   }
   const auto& font = fontIt->second;
+
+  // Resolve fallback font (may be null if not set or not found)
+  const EpdFontFamily* fallbackFont = nullptr;
+  if (fallbackFontId >= 0 && fallbackFontId != fontId) {
+    const auto fbIt = fontMap.find(fallbackFontId);
+    if (fbIt != fontMap.end()) {
+      fallbackFont = &fbIt->second;
+    }
+  }
+
   constexpr int MIN_COMBINING_GAP_PX = 1;
 
   uint32_t cp;
@@ -250,14 +260,20 @@ void GfxRenderer::drawText(const int fontId, const int x, const int y, const cha
       xPos += font.getKerning(prevCp, cp, style);
     }
 
-    const EpdGlyph* glyph = font.getGlyph(cp, style);
+    // Check if glyph exists in primary font; if not, try fallback
+    const EpdFontFamily* activeFont = &font;
+    if (!font.hasGlyph(cp, style) && fallbackFont != nullptr && fallbackFont->hasGlyph(cp)) {
+      activeFont = fallbackFont;
+    }
+
+    const EpdGlyph* glyph = activeFont->getGlyph(cp, style);
 
     lastBaseX = xPos;
     lastBaseY = yPos;
     lastBaseAdvance = glyph ? glyph->advanceX : 0;
     lastBaseTop = glyph ? glyph->top : 0;
 
-    renderChar(font, cp, &xPos, &yPos, black, style);
+    renderChar(*activeFont, cp, &xPos, &yPos, black, style);
     prevCp = cp;
   }
 }

@@ -95,27 +95,35 @@ void TxtReaderActivity::loop() {
 
   // When long-press chapter skip is disabled, turn pages on press instead of release.
   const bool usePressForPageTurn = !SETTINGS.longPressChapterSkip;
-  const bool prevTriggered = usePressForPageTurn ? (mappedInput.wasPressed(MappedInputManager::Button::PageBack) ||
-                                                    mappedInput.wasPressed(MappedInputManager::Button::Left))
-                                                 : (mappedInput.wasReleased(MappedInputManager::Button::PageBack) ||
-                                                    mappedInput.wasReleased(MappedInputManager::Button::Left));
   const bool powerPageTurn = SETTINGS.shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::PAGE_TURN &&
                              mappedInput.wasReleased(MappedInputManager::Button::Power);
-  const bool nextTriggered = usePressForPageTurn
-                                 ? (mappedInput.wasPressed(MappedInputManager::Button::PageForward) || powerPageTurn ||
-                                    mappedInput.wasPressed(MappedInputManager::Button::Right))
-                                 : (mappedInput.wasReleased(MappedInputManager::Button::PageForward) || powerPageTurn ||
-                                    mappedInput.wasReleased(MappedInputManager::Button::Right));
 
-  if (!prevTriggered && !nextTriggered) {
+  // Side buttons (Always +/- 1 page)
+  const bool sidePrev = usePressForPageTurn ? mappedInput.wasPressed(MappedInputManager::Button::PageBack)
+                                            : mappedInput.wasReleased(MappedInputManager::Button::PageBack);
+  const bool sideNext = usePressForPageTurn ? (mappedInput.wasPressed(MappedInputManager::Button::PageForward) || powerPageTurn)
+                                            : (mappedInput.wasReleased(MappedInputManager::Button::PageForward) || powerPageTurn);
+
+  // Front buttons (Consistent 10-page skip)
+  const bool frontLeft = mappedInput.wasReleased(MappedInputManager::Button::Left);
+  const bool frontRight = mappedInput.wasReleased(MappedInputManager::Button::Right);
+
+  if (!sidePrev && !sideNext && !frontLeft && !frontRight) {
     return;
   }
 
-  if (prevTriggered && currentPage > 0) {
-    currentPage--;
-    requestUpdate();
-  } else if (nextTriggered && currentPage < totalPages - 1) {
-    currentPage++;
+  int delta = 0;
+  if (frontLeft) delta = -10;
+  else if (frontRight) delta = 10;
+  else if (sidePrev) delta = -1;
+  else if (sideNext) delta = 1;
+
+  int targetPage = static_cast<int>(currentPage) + delta;
+  if (targetPage < 0) targetPage = 0;
+  if (targetPage >= totalPages) targetPage = totalPages - 1;
+
+  if (currentPage != static_cast<uint32_t>(targetPage)) {
+    currentPage = static_cast<uint32_t>(targetPage);
     requestUpdate();
   }
 }

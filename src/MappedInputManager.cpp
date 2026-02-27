@@ -54,6 +54,17 @@ bool MappedInputManager::mapButton(const Button button, bool (HalGPIO::*fn)(uint
   return false;
 }
 
+void MappedInputManager::update() {
+  gpio.update();
+  // Clear long press flag for any logical buttons released this frame
+  // Check each logical button
+  for (int i = 0; i <= static_cast<int>(Button::PageForward); i++) {
+    if (wasReleased(static_cast<Button>(i))) {
+      firedLongPressMask &= ~(1 << i);
+    }
+  }
+}
+
 bool MappedInputManager::wasPressed(const Button button) const { return mapButton(button, &HalGPIO::wasPressed); }
 
 bool MappedInputManager::wasReleased(const Button button) const { return mapButton(button, &HalGPIO::wasReleased); }
@@ -65,6 +76,25 @@ bool MappedInputManager::wasAnyPressed() const { return gpio.wasAnyPressed(); }
 bool MappedInputManager::wasAnyReleased() const { return gpio.wasAnyReleased(); }
 
 unsigned long MappedInputManager::getHeldTime() const { return gpio.getHeldTime(); }
+
+bool MappedInputManager::isLongPressed(const Button button, const unsigned long threshold) const {
+  return isPressed(button) && getHeldTime() >= threshold;
+}
+
+bool MappedInputManager::wasLongPressed(const Button button, const unsigned long threshold) {
+  if (isLongPressed(button, threshold)) {
+    int bit = static_cast<int>(button);
+    if (!(firedLongPressMask & (1 << bit))) {
+      firedLongPressMask |= (1 << bit);
+      return true;
+    }
+  }
+  return false;
+}
+
+bool MappedInputManager::wasShortPressed(const Button button, const unsigned long threshold) const {
+  return wasReleased(button) && getHeldTime() < threshold;
+}
 
 MappedInputManager::Labels MappedInputManager::mapLabels(const char* back, const char* confirm, const char* previous,
                                                          const char* next) const {

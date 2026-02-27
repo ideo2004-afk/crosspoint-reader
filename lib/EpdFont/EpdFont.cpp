@@ -182,3 +182,23 @@ const EpdGlyph* EpdFont::getGlyph(const uint32_t cp) const {
   }
   return nullptr;
 }
+
+bool EpdFont::hasGlyph(const uint32_t cp) const {
+  const EpdUnicodeInterval* intervals = data->intervals;
+  const int count = data->intervalCount;
+  if (count == 0) return false;
+  int left = 0;
+  int right = count - 1;
+  while (left <= right) {
+    const int mid = left + (right - left) / 2;
+    const EpdUnicodeInterval* interval = &intervals[mid];
+    if (cp < interval->first) {
+      right = mid - 1;
+    } else if (cp > interval->last) {
+      left = mid + 1;
+    } else {
+      return true;
+    }
+  }
+  return false;
+}

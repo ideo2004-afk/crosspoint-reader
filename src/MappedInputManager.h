@@ -15,19 +15,23 @@ class MappedInputManager {
 
   explicit MappedInputManager(HalGPIO& gpio) : gpio(gpio) {}
 
-  void update() const { gpio.update(); }
+  void update();
   bool wasPressed(Button button) const;
   bool wasReleased(Button button) const;
   bool isPressed(Button button) const;
   bool wasAnyPressed() const;
   bool wasAnyReleased() const;
   unsigned long getHeldTime() const;
+  bool isLongPressed(Button button, unsigned long threshold = 500) const;
+  bool wasLongPressed(Button button, unsigned long threshold = 500);
+  bool wasShortPressed(Button button, unsigned long threshold = 500) const;
   Labels mapLabels(const char* back, const char* confirm, const char* previous, const char* next) const;
   // Returns the raw front button index that was pressed this frame (or -1 if none).
   int getPressedFrontButton() const;
 
  private:
   HalGPIO& gpio;
+  uint16_t firedLongPressMask = 0;
 
   bool mapButton(Button button, bool (HalGPIO::*fn)(uint8_t) const) const;
 };

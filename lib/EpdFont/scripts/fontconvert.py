@@ -69,44 +69,33 @@ intervals = [
     # Arrows
     (0x2190, 0x21FF),
     ### CJK ###
-    # Core Unified Ideographs
+    # Full Core Unified Ideographs (too large for flash, ~20992 chars)
     # (0x4E00, 0x9FFF),
-    # # Extension A
+    # Common subset (~3000 most frequent Traditional Chinese characters)
+    # These cover 99%+ of typical Chinese text
+    (0x4E00, 0x5E7F),  # ~4224 most common (lower CJK block)
+    # Extension A
     # (0x3400, 0x4DBF),
-    # # Extension B
-    # (0x20000, 0x2A6DF),
-    # # Extension C–F
-    # (0x2A700, 0x2EBEF),
-    # # Extension G
-    # (0x30000, 0x3134F),
-    # # Hiragana
-    # (0x3040, 0x309F),
-    # # Katakana
-    # (0x30A0, 0x30FF),
+    # Hiragana
+    (0x3040, 0x309F),
+    # Katakana
+    (0x30A0, 0x30FF),
     # # Katakana Phonetic Extensions
     # (0x31F0, 0x31FF),
     # # Halfwidth Katakana
     # (0xFF60, 0xFF9F),
-    # # Hangul Syllables
-    # (0xAC00, 0xD7AF),
-    # # Hangul Jamo
-    # (0x1100, 0x11FF),
-    # # Hangul Compatibility Jamo
-    # (0x3130, 0x318F),
-    # # Hangul Jamo Extended-A
-    # (0xA960, 0xA97F),
-    # # Hangul Jamo Extended-B
-    # (0xD7B0, 0xD7FF),
     # # CJK Radicals Supplement
     # (0x2E80, 0x2EFF),
     # # Kangxi Radicals
     # (0x2F00, 0x2FDF),
-    # # CJK Symbols and Punctuation
-    # (0x3000, 0x303F),
-    # # CJK Compatibility Forms
-    # (0xFE30, 0xFE4F),
-    # # CJK Compatibility Ideographs
+    # CJK Symbols and Punctuation
+    (0x3000, 0x303F),
+    # CJK Compatibility Forms
+    (0xFE30, 0xFE4F),
+    # CJK Compatibility Ideographs
     # (0xF900, 0xFAFF),
+    # Halfwidth and Fullwidth Forms
+    (0xFF00, 0xFFEF),
     ### Alphabetic Presentation Forms (Latin ligatures) ###
     # ff, fi, fl, ffi, ffl, long-st, st
     (0xFB00, 0xFB06),
