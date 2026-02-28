@@ -14,7 +14,6 @@ enum class SettingType { TOGGLE, ENUM, ACTION, VALUE, STRING };
 
 enum class SettingAction {
   None,
-  RemapFrontButtons,
   KOReaderSync,
   OPDSBrowser,
   Network,

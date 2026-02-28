@@ -93,7 +93,7 @@ void RecentBooksActivity::render(Activity::RenderLock&&) {
   GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_MENU_RECENT_BOOKS));
 
   const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
-  const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
+  const int contentHeight = pageHeight - contentTop - metrics.verticalSpacing;
 
   // Recent tab
   if (recentBooks.empty()) {
@@ -104,10 +104,6 @@ void RecentBooksActivity::render(Activity::RenderLock&&) {
         [this](int index) { return recentBooks[index].title; }, [this](int index) { return recentBooks[index].author; },
         [this](int index) { return UITheme::getFileIcon(recentBooks[index].path); });
   }
-
-  // Help text
-  const auto labels = mappedInput.mapLabels(tr(STR_HOME), tr(STR_OPEN), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
 }

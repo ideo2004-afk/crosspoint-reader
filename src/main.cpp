@@ -201,9 +201,9 @@ void waitForPowerRelease() {
   }
 }
 
-// Enter deep sleep mode
+// Enter deep sleep mode (used only by Light Sleep escalation or direct call)
 void enterDeepSleep() {
-  HalPowerManager::Lock powerLock;  // Ensure we are at normal CPU frequency for sleep preparation
+  HalPowerManager::Lock powerLock;
   APP_STATE.lastSleepFromReader = currentActivity && currentActivity->isReaderActivity();
   APP_STATE.saveToFile();
   exitActivity();
@@ -214,6 +214,24 @@ void enterDeepSleep() {
   LOG_DBG("MAIN", "Entering deep sleep");
 
   powerManager.startDeepSleep(gpio);
+}
+
+// Enter light sleep mode (first stage of two-stage power management)
+// CPU pauses, memory is retained. Wakes instantly on power button press.
+// Automatically escalates to deep sleep after 3 hours.
+void enterLightSleep() {
+  HalPowerManager::Lock powerLock;
+  APP_STATE.lastSleepFromReader = currentActivity && currentActivity->isReaderActivity();
+  APP_STATE.saveToFile();
+  exitActivity();
+  enterNewActivity(new SleepActivity(renderer, mappedInputManager));
+
+  display.deepSleep(); // e-ink display into low power mode
+  LOG_DBG("MAIN", "Entering light sleep (escalates to deep sleep after 3h)");
+
+  // startLightSleep will automatically call startDeepSleep if woken by timer
+  powerManager.startLightSleep(gpio);
+  // If we reach here, we were woken by power button -> normal boot resumes
 }
 
 void onGoHome();
@@ -434,17 +452,14 @@ void loop() {
   if (millis() - lastActivityTime >= sleepTimeoutMs) {
     LOG_DBG("SLP", "Auto-sleep triggered after %lu ms of inactivity", sleepTimeoutMs);
     enterDeepSleep();
-    // This should never be hit as `enterDeepSleep` calls esp_deep_sleep_start
     return;
   }
 
   if (gpio.isPressed(HalGPIO::BTN_POWER) && gpio.getHeldTime() > SETTINGS.getPowerButtonDuration()) {
-    // If the screenshot combination is potentially being pressed, don't sleep
     if (gpio.isPressed(HalGPIO::BTN_DOWN)) {
       return;
     }
     enterDeepSleep();
-    // This should never be hit as `enterDeepSleep` calls esp_deep_sleep_start
     return;
   }
 

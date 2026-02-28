@@ -29,6 +29,12 @@ class MappedInputManager {
   // Returns the raw front button index that was pressed this frame (or -1 if none).
   int getPressedFrontButton() const;
 
+  // Raw physical GPIO access (bypasses remapping) for activities with fixed layouts.
+  bool wasReleasedRaw(uint8_t buttonIndex) const;
+  bool isPressedRaw(uint8_t buttonIndex) const;
+  bool wasReleasedAnyOf(uint8_t a, uint8_t b) const;
+  bool isPressedAnyOf(uint8_t a, uint8_t b) const;
+
  private:
   HalGPIO& gpio;
   uint16_t firedLongPressMask = 0;

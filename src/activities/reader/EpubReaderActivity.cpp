@@ -164,8 +164,28 @@ void EpubReaderActivity::loop() {
     return;
   }
 
-  // Enter reader menu activity.
-  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+  // === Custom Fixed Button Layout ===
+  // Front LEFT cluster (BACK + CONFIRM): short=prev page, long=home/file select
+  // Front RIGHT cluster (LEFT + RIGHT): short=next page, long=reader menu
+  // Side UP:   short=next page, long=+10 pages
+  // Side DOWN: short=prev page, long=-10 pages
+  const unsigned long longPressMs = 600;
+
+  // Front LEFT cluster: short=prev page, long=go home
+  // Both checked on RELEASE to avoid bleed-through into next activity
+  if (mappedInput.wasReleasedAnyOf(HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM)) {
+    if (mappedInput.getHeldTime() >= 1000) {
+      onGoHome();
+      return;
+    }
+  }
+  const bool frontLeftShort = mappedInput.wasReleasedAnyOf(HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM) &&
+                              mappedInput.getHeldTime() < 1000;
+
+  // Front RIGHT cluster: short=next page, long=reader menu
+  // Triggered on RELEASE to avoid stale button events leaking into the menu activity
+  const bool frontRightReleased = mappedInput.wasReleasedAnyOf(HalGPIO::BTN_LEFT, HalGPIO::BTN_RIGHT);
+  if (frontRightReleased && mappedInput.getHeldTime() >= longPressMs) {
     const int currentPage = section ? section->currentPage + 1 : 0;
     const int totalPages = section ? section->pageCount : 0;
     float bookProgress = 0.0f;
@@ -174,104 +194,75 @@ void EpubReaderActivity::loop() {
       bookProgress = epub->calculateProgress(currentSpineIndex, chapterProgress) * 100.0f;
     }
     const int bookProgressPercent = clampPercent(static_cast<int>(bookProgress + 0.5f));
+    skipNextButtonCheck = true;
     exitActivity();
     enterNewActivity(new EpubReaderMenuActivity(
         this->renderer, this->mappedInput, epub->getTitle(), currentPage, totalPages, bookProgressPercent,
         SETTINGS.orientation, [this](const uint8_t orientation) { onReaderMenuBack(orientation); },
         [this](EpubReaderMenuActivity::MenuAction action) { onReaderMenuConfirm(action); }));
+    return;
   }
+  const bool frontRightShort = frontRightReleased && mappedInput.getHeldTime() < longPressMs;
 
-  // Long press BACK (1s+) goes to file selection
-  if (mappedInput.isPressed(MappedInputManager::Button::Back) && mappedInput.getHeldTime() >= goHomeMs) {
-    onGoBack();
+  // Side UP: short = next page, long = +10 pages
+  const bool sideUpReleased = mappedInput.wasReleasedRaw(HalGPIO::BTN_UP);
+  const bool sideUpShort = sideUpReleased && mappedInput.getHeldTime() < longPressMs;
+  const bool sideUpLong = mappedInput.wasLongPressed(MappedInputManager::Button::Up, longPressMs) &&
+                          !mappedInput.isPressedRaw(HalGPIO::BTN_DOWN);
+
+  // Side DOWN: short = prev page, long = -10 pages
+  const bool sideDownReleased = mappedInput.wasReleasedRaw(HalGPIO::BTN_DOWN);
+  const bool sideDownShort = sideDownReleased && mappedInput.getHeldTime() < longPressMs;
+  const bool sideDownLong = mappedInput.wasLongPressed(MappedInputManager::Button::Down, longPressMs) &&
+                            !mappedInput.isPressedRaw(HalGPIO::BTN_UP);
+
+  if (!frontLeftShort && !frontRightShort && !sideUpShort && !sideUpLong && !sideDownShort && !sideDownLong) {
     return;
   }
 
-  // Short press BACK goes directly to home
-  if (mappedInput.wasReleased(MappedInputManager::Button::Back) && mappedInput.getHeldTime() < goHomeMs) {
-    onGoHome();
+  // Determine page delta
+  int delta = 0;
+  if (sideUpLong)        delta = 10;
+  else if (sideDownLong) delta = -10;
+  else if (frontRightShort || sideUpShort) delta = 1;
+  else if (frontLeftShort || sideDownShort) delta = -1;
+
+  if (delta == 0) {
+    requestUpdate();
     return;
   }
 
-  // When long-press chapter skip is disabled, turn pages on press instead of release.
-  const bool usePressForPageTurn = !SETTINGS.longPressChapterSkip;
-  const bool powerPageTurn = SETTINGS.shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::PAGE_TURN &&
-                             mappedInput.wasReleased(MappedInputManager::Button::Power);
-
-  // Side buttons (Always +/- 1 page as requested)
-  const bool sidePrev = usePressForPageTurn ? mappedInput.wasPressed(MappedInputManager::Button::PageBack)
-                                            : mappedInput.wasReleased(MappedInputManager::Button::PageBack);
-  const bool sideNext = usePressForPageTurn ? (mappedInput.wasPressed(MappedInputManager::Button::PageForward) || powerPageTurn)
-                                            : (mappedInput.wasReleased(MappedInputManager::Button::PageForward) || powerPageTurn);
-
-  // Front buttons (Consistent 10-page skip as requested)
-  const bool frontLeft = mappedInput.wasReleased(MappedInputManager::Button::Left);
-  const bool frontRight = mappedInput.wasReleased(MappedInputManager::Button::Right);
-
-  if (!sidePrev && !sideNext && !frontLeft && !frontRight) {
+  if (!section) {
+    requestUpdate();
     return;
   }
 
-  // Action Routing
-  if (frontLeft || frontRight) {
-    // Front Buttons: 10 Page Skip
-    if (!section) {
-      requestUpdate();
-      return;
-    }
-    int delta = frontRight ? 10 : -10;
-    int targetPage = section->currentPage + delta;
-
-    if (targetPage < 0) {
-      if (currentSpineIndex > 0) {
-        RenderLock lock(*this);
-        nextPageNumber = UINT16_MAX;
-        currentSpineIndex--;
-        section.reset();
-      } else {
-        section->currentPage = 0;
-      }
-    } else if (targetPage >= section->pageCount) {
-      if (currentSpineIndex < epub->getSpineItemsCount() - 1) {
-        RenderLock lock(*this);
-        nextPageNumber = 0;
-        currentSpineIndex++;
-        section.reset();
-      } else {
-        section->currentPage = section->pageCount - 1;
-      }
+  int targetPage = section->currentPage + delta;
+  if (targetPage < 0) {
+    if (currentSpineIndex > 0) {
+      RenderLock lock(*this);
+      nextPageNumber = UINT16_MAX;
+      currentSpineIndex--;
+      section.reset();
     } else {
-      section->currentPage = targetPage;
+      section->currentPage = 0;
     }
-  } else if (sidePrev || sideNext) {
-    // Side Buttons: Normal Page Turn
-    if (!section) {
-      requestUpdate();
-      return;
-    }
-    if (sidePrev) {
-      if (section->currentPage > 0) {
-        section->currentPage--;
-      } else if (currentSpineIndex > 0) {
-        RenderLock lock(*this);
-        nextPageNumber = UINT16_MAX;
-        currentSpineIndex--;
-        section.reset();
-      }
+  } else if (targetPage >= section->pageCount) {
+    if (currentSpineIndex < epub->getSpineItemsCount() - 1) {
+      RenderLock lock(*this);
+      nextPageNumber = 0;
+      currentSpineIndex++;
+      section.reset();
     } else {
-      if (section->currentPage < section->pageCount - 1) {
-        section->currentPage++;
-      } else {
-        RenderLock lock(*this);
-        nextPageNumber = 0;
-        currentSpineIndex++;
-        section.reset();
-      }
+      section->currentPage = section->pageCount - 1;
     }
+  } else {
+    section->currentPage = targetPage;
   }
 
   requestUpdate();
 }
+
 
 void EpubReaderActivity::onReaderMenuBack(const uint8_t orientation) {
   exitActivity();

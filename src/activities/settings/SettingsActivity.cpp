@@ -3,7 +3,6 @@
 #include <GfxRenderer.h>
 #include <Logging.h>
 
-#include "ButtonRemapActivity.h"
 #include "CalibreSettingsActivity.h"
 #include "ClearCacheActivity.h"
 #include "CrossPointSettings.h"
@@ -43,8 +42,6 @@ void SettingsActivity::onEnter() {
   }
 
   // Append device-only ACTION items
-  controlsSettings.insert(controlsSettings.begin(),
-                          SettingInfo::Action(StrId::STR_REMAP_FRONT_BUTTONS, SettingAction::RemapFrontButtons));
   systemSettings.push_back(SettingInfo::Action(StrId::STR_WIFI_NETWORKS, SettingAction::Network));
   systemSettings.push_back(SettingInfo::Action(StrId::STR_KOREADER_SYNC, SettingAction::KOReaderSync));
   systemSettings.push_back(SettingInfo::Action(StrId::STR_OPDS_BROWSER, SettingAction::OPDSBrowser));
@@ -178,9 +175,6 @@ void SettingsActivity::toggleCurrentSetting() {
     };
 
     switch (setting.action) {
-      case SettingAction::RemapFrontButtons:
-        enterSubActivity(new ButtonRemapActivity(renderer, mappedInput, onComplete));
-        break;
       case SettingAction::KOReaderSync:
         enterSubActivity(new KOReaderSettingsActivity(renderer, mappedInput, onComplete));
         break;
@@ -252,10 +246,6 @@ void SettingsActivity::render(Activity::RenderLock&&) {
         return valueText;
       },
       true);
-
-  // Draw help text
-  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_TOGGLE), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   // Always use standard refresh for settings screen
   renderer.displayBuffer();

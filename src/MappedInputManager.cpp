@@ -23,31 +23,26 @@ bool MappedInputManager::mapButton(const Button button, bool (HalGPIO::*fn)(uint
 
   switch (button) {
     case Button::Back:
-      // Logical Back maps to user-configured front button.
-      return (gpio.*fn)(SETTINGS.frontButtonBack);
+      // Front LEFT cluster (BTN_BACK + BTN_CONFIRM) → logical Back
+      return (gpio.*fn)(HalGPIO::BTN_BACK) || (gpio.*fn)(HalGPIO::BTN_CONFIRM);
     case Button::Confirm:
-      // Logical Confirm maps to user-configured front button.
-      return (gpio.*fn)(SETTINGS.frontButtonConfirm);
+      // Front RIGHT cluster (BTN_LEFT + BTN_RIGHT) → logical Select/Confirm
+      return (gpio.*fn)(HalGPIO::BTN_LEFT) || (gpio.*fn)(HalGPIO::BTN_RIGHT);
     case Button::Left:
-      // Logical Left maps to user-configured front button.
-      return (gpio.*fn)(SETTINGS.frontButtonLeft);
+      // Merged into Back cluster; no longer used as standalone logical button.
+      return false;
     case Button::Right:
-      // Logical Right maps to user-configured front button.
-      return (gpio.*fn)(SETTINGS.frontButtonRight);
+      // Merged into Confirm cluster; no longer used as standalone logical button.
+      return false;
     case Button::Up:
-      // Side buttons remain fixed for Up/Down.
       return (gpio.*fn)(HalGPIO::BTN_UP);
     case Button::Down:
-      // Side buttons remain fixed for Up/Down.
       return (gpio.*fn)(HalGPIO::BTN_DOWN);
     case Button::Power:
-      // Power button bypasses remapping.
       return (gpio.*fn)(HalGPIO::BTN_POWER);
     case Button::PageBack:
-      // Reader page navigation uses side buttons and can be swapped via settings.
       return (gpio.*fn)(side.pageBack);
     case Button::PageForward:
-      // Reader page navigation uses side buttons and can be swapped via settings.
       return (gpio.*fn)(side.pageForward);
   }
 
@@ -136,4 +131,16 @@ int MappedInputManager::getPressedFrontButton() const {
     return HalGPIO::BTN_RIGHT;
   }
   return -1;
+}
+
+bool MappedInputManager::wasReleasedRaw(uint8_t buttonIndex) const { return gpio.wasReleased(buttonIndex); }
+
+bool MappedInputManager::isPressedRaw(uint8_t buttonIndex) const { return gpio.isPressed(buttonIndex); }
+
+bool MappedInputManager::wasReleasedAnyOf(uint8_t a, uint8_t b) const {
+  return gpio.wasReleased(a) || gpio.wasReleased(b);
+}
+
+bool MappedInputManager::isPressedAnyOf(uint8_t a, uint8_t b) const {
+  return gpio.isPressed(a) || gpio.isPressed(b);
 }

@@ -16,13 +16,20 @@ class FlashcardActivity final : public Activity {
   void loop() override;
 
  private:
+  struct FlashCardPair {
+    std::string sideA;
+    std::string sideB; // Empty if no back side
+  };
+
   std::function<void()> onGoBack;
-  std::vector<std::string> flashcardFiles;
+  std::vector<FlashCardPair> cards;
   int currentIndex = -1;
+  bool isShowingBack = false;
 
   void loadFileList();
   void showRandomCard();
   void showNextCard();
   void showPrevCard();
-  void renderCard(const std::string& path, bool fullRefresh = false);
+  void toggleFlip();
+  void renderCard(int index, bool isBack, bool fullRefresh = false);
 };

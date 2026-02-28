@@ -3,6 +3,7 @@
 #include <Bitmap.h>
 #include <Epub.h>
 #include <GfxRenderer.h>
+#include <HalGPIO.h>
 #include <HalStorage.h>
 #include <I18n.h>
 #include <Utf8.h>
@@ -185,8 +186,10 @@ void HomeActivity::loop() {
     requestUpdate();
   });
 
-  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-    // Calculate dynamic indices based on which options are available
+  // Front RIGHT cluster (LEFT + RIGHT): Select / Toggle
+  const bool selectPressed = mappedInput.wasReleasedAnyOf(HalGPIO::BTN_LEFT, HalGPIO::BTN_RIGHT) ||
+                             mappedInput.wasReleased(MappedInputManager::Button::Confirm);
+  if (selectPressed) {
     int idx = 0;
     int menuSelectedIndex = selectorIndex - static_cast<int>(recentBooks.size());
     const int myLibraryIdx = idx++;
@@ -212,6 +215,9 @@ void HomeActivity::loop() {
       onSettingsOpen();
     }
   }
+
+  // Front LEFT cluster (BACK + CONFIRM): do nothing on home screen (already at top level)
+  // (intentionally left empty — no parent to go back to)
 }
 
 void HomeActivity::render(Activity::RenderLock&&) {
@@ -248,9 +254,7 @@ void HomeActivity::render(Activity::RenderLock&&) {
       [&menuItems](int index) { return std::string(menuItems[index]); },
       [&menuIcons](int index) { return menuIcons[index]; });
 
-  const auto labels = mappedInput.mapLabels("", tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
-
+  // No button hints on home screen
   renderer.displayBuffer();
 
   if (!firstRenderDone) {

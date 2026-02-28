@@ -451,7 +451,5 @@ void CrossPointWebServerActivity::renderServerRunning() const {
     std::string hostnameUrl = std::string(tr(STR_OR_HTTP_PREFIX)) + AP_HOSTNAME + ".local/";
     renderer.drawCenteredText(SMALL_FONT_ID, startY, hostnameUrl.c_str(), true);
   }
-
-  const auto labels = mappedInput.mapLabels(tr(STR_EXIT), "", "", "");
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }
+

@@ -81,42 +81,36 @@ void TxtReaderActivity::loop() {
     return;
   }
 
-  // Long press BACK (1s+) goes to file selection
-  if (mappedInput.isPressed(MappedInputManager::Button::Back) && mappedInput.getHeldTime() >= goHomeMs) {
-    onGoBack();
-    return;
-  }
+  // === Custom Fixed Button Layout ===
+  // Front LEFT cluster (BACK+CONFIRM): short=prev, long=home
+  // Front RIGHT cluster (LEFT+RIGHT): short=next, long=(reserved)
+  // Side UP: short=next page, long=+10 pages
+  // Side DOWN: short=prev page, long=-10 pages
+  const unsigned long longPressMs = 600;
 
-  // Short press BACK goes directly to home
-  if (mappedInput.wasReleased(MappedInputManager::Button::Back) && mappedInput.getHeldTime() < goHomeMs) {
+  // Front LEFT long press -> home
+  if (mappedInput.isPressedAnyOf(HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM) &&
+      mappedInput.getHeldTime() >= 1000) {
     onGoHome();
     return;
   }
+  const bool frontLeftShort = mappedInput.wasReleasedAnyOf(HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM) &&
+                              mappedInput.getHeldTime() < 1000;
+  const bool frontRightShort = mappedInput.wasReleasedAnyOf(HalGPIO::BTN_LEFT, HalGPIO::BTN_RIGHT) &&
+                               mappedInput.getHeldTime() < longPressMs;
 
-  // When long-press chapter skip is disabled, turn pages on press instead of release.
-  const bool usePressForPageTurn = !SETTINGS.longPressChapterSkip;
-  const bool powerPageTurn = SETTINGS.shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::PAGE_TURN &&
-                             mappedInput.wasReleased(MappedInputManager::Button::Power);
-
-  // Side buttons (Always +/- 1 page)
-  const bool sidePrev = usePressForPageTurn ? mappedInput.wasPressed(MappedInputManager::Button::PageBack)
-                                            : mappedInput.wasReleased(MappedInputManager::Button::PageBack);
-  const bool sideNext = usePressForPageTurn ? (mappedInput.wasPressed(MappedInputManager::Button::PageForward) || powerPageTurn)
-                                            : (mappedInput.wasReleased(MappedInputManager::Button::PageForward) || powerPageTurn);
-
-  // Front buttons (Consistent 10-page skip)
-  const bool frontLeft = mappedInput.wasReleased(MappedInputManager::Button::Left);
-  const bool frontRight = mappedInput.wasReleased(MappedInputManager::Button::Right);
-
-  if (!sidePrev && !sideNext && !frontLeft && !frontRight) {
-    return;
-  }
+  // Side UP: short=next, long=+10
+  const bool sideUpShort   = mappedInput.wasReleasedRaw(HalGPIO::BTN_UP)  && mappedInput.getHeldTime() < longPressMs;
+  const bool sideUpLong    = mappedInput.wasLongPressed(MappedInputManager::Button::Up, longPressMs);
+  // Side DOWN: short=prev, long=-10
+  const bool sideDownShort = mappedInput.wasReleasedRaw(HalGPIO::BTN_DOWN) && mappedInput.getHeldTime() < longPressMs;
+  const bool sideDownLong  = mappedInput.wasLongPressed(MappedInputManager::Button::Down, longPressMs);
 
   int delta = 0;
-  if (frontLeft) delta = -10;
-  else if (frontRight) delta = 10;
-  else if (sidePrev) delta = -1;
-  else if (sideNext) delta = 1;
+  if (sideUpLong)           delta = 10;
+  else if (sideDownLong)    delta = -10;
+  else if (frontRightShort || sideUpShort)  delta = 1;
+  else if (frontLeftShort  || sideDownShort) delta = -1;
 
   int targetPage = static_cast<int>(currentPage) + delta;
   if (targetPage < 0) targetPage = 0;

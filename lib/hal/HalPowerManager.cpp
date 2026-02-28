@@ -64,6 +64,34 @@ void HalPowerManager::startDeepSleep(HalGPIO& gpio) const {
   esp_deep_sleep_start();
 }
 
+void HalPowerManager::startLightSleep(HalGPIO& gpio, unsigned long deepSleepAfterMs) const {
+  // Wait for power button to be released
+  while (gpio.isPressed(HalGPIO::BTN_POWER)) {
+    delay(50);
+    gpio.update();
+  }
+
+  // Configure GPIO wakeup (power button LOW = pressed)
+  gpio_wakeup_enable((gpio_num_t)InputManager::POWER_BUTTON_PIN, GPIO_INTR_LOW_LEVEL);
+  esp_sleep_enable_gpio_wakeup();
+
+  // Configure RTC timer wakeup to escalate to deep sleep after deepSleepAfterMs
+  esp_sleep_enable_timer_wakeup((uint64_t)deepSleepAfterMs * 1000ULL); // us
+
+  // Enter Light Sleep — CPU pauses, memory is retained
+  esp_light_sleep_start();
+
+  // --- Woken up from light sleep ---
+  esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
+  if (cause == ESP_SLEEP_WAKEUP_TIMER) {
+    // Timer expired: escalate to deep sleep
+    LOG_DBG("PWR", "Light sleep timer expired, entering deep sleep");
+    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER);
+    startDeepSleep(gpio);
+  }
+  // else: woken by power button — caller (main.cpp) handles normal boot flow
+}
+
 uint16_t HalPowerManager::getBatteryPercentage() const {
   static const BatteryMonitor battery = BatteryMonitor(BAT_GPIO0);
   return battery.readPercentage();
