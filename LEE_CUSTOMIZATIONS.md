@@ -146,3 +146,28 @@ Behavior is identical to the EPUB reader, respecting `Settings → Status Bar` m
 | Book Progress Bar | Page X/Y, thin bar, battery |
 | No Progress       | Battery only                |
 | None              | Nothing                     |
+
+---
+
+## 8. Flashcard Generation Script
+
+**File:** `Flashcard_Sleep/gen_flashcards.py`
+
+A standalone Python script to generate BMP flashcards from the Markdown vocabulary list.
+
+**Features:**
+
+- **Landscape Layout:** 800 × 480 px (native for rotated reader view).
+- **Phonetics Support:** Uses `Arial Unicode.ttf` to correctly render KK phonetics.
+- **Side A:** Large Word, KK Phonetic, and POS (centered).
+- **Side B:** Full info including wrapped example sentences and Chinese definitions.
+- **Grayscale BMP:** Outputs 8-bit grayscale BMPs for E-ink compatibility.
+
+**Usage:**
+
+```bash
+cd "/Users/lee/Documents/XTEINK X4/Flashcard_Sleep"
+python3 gen_flashcards.py
+```
+
+Outputs cards to the `flashcard/` directory (e.g., `001_a.bmp`, `001_b.bmp`).
