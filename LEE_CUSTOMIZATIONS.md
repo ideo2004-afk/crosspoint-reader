@@ -118,10 +118,31 @@ When a new official release is available:
 # Fetch new upstream commits
 git fetch origin
 
-# Rebase our single custom commit onto the new upstream
+# Rebase our custom commits onto the new upstream
 git checkout lee/custom-layout
 git rebase origin/master
 ```
 
 Resolve any conflicts (most likely in `MappedInputManager.cpp` and reader activity files),
 then rebuild and flash with `pio run -t upload`.
+
+---
+
+## 7. XTC Reader — Status Bar Fix
+
+**File:** `src/activities/reader/XtcReaderActivity.cpp` / `.h`
+
+The original code assumed the status bar was pre-baked into each XTC page bitmap.
+In practice, the converter does not include a status bar, so nothing was displayed.
+
+**Fix:** Added `renderStatusBar()` method that overlays the status bar on top of the rendered
+page bitmap after each page is drawn. Applies to both 1-bit and 2-bit (grayscale) render paths.
+
+Behavior is identical to the EPUB reader, respecting `Settings → Status Bar` mode:
+
+| Mode              | Elements Shown              |
+| ----------------- | --------------------------- |
+| Full              | Page X/Y, book %, battery   |
+| Book Progress Bar | Page X/Y, thin bar, battery |
+| No Progress       | Battery only                |
+| None              | Nothing                     |

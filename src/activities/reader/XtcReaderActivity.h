@@ -21,6 +21,7 @@ class XtcReaderActivity final : public ActivityWithSubactivity {
   const std::function<void()> onGoHome;
 
   void renderPage();
+  void renderStatusBar() const;
   void saveProgress() const;
   void loadProgress();
 
