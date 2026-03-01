@@ -25,9 +25,6 @@ int HomeActivity::getMenuItemCount() const {
   if (!recentBooks.empty()) {
     count += recentBooks.size();
   }
-  if (hasOpdsUrl) {
-    count++;
-  }
   return count;
 }
 
@@ -112,9 +109,6 @@ void HomeActivity::loadRecentCovers(int coverHeight) {
 void HomeActivity::onEnter() {
   Activity::onEnter();
 
-  // Check if OPDS browser URL is configured
-  hasOpdsUrl = strlen(SETTINGS.opdsServerUrl) > 0;
-
   selectorIndex = 0;
 
   const auto& metrics = UITheme::getInstance().getMetrics();
@@ -186,16 +180,14 @@ void HomeActivity::loop() {
     requestUpdate();
   });
 
-  // Front RIGHT cluster (LEFT + RIGHT): Select / Toggle
-  const bool selectPressed = mappedInput.wasReleasedAnyOf(HalGPIO::BTN_LEFT, HalGPIO::BTN_RIGHT) ||
-                             mappedInput.wasReleased(MappedInputManager::Button::Confirm);
+  // Front RIGHT cluster (LEFT + RIGHT): Select / Toggle (Snappy)
+  const bool selectPressed = mappedInput.wasShortPressed(MappedInputManager::Button::Confirm, 500);
   if (selectPressed) {
     int idx = 0;
     int menuSelectedIndex = selectorIndex - static_cast<int>(recentBooks.size());
     const int myLibraryIdx = idx++;
     const int recentsIdx = idx++;
     const int flashcardIdx = idx++;
-    const int opdsLibraryIdx = hasOpdsUrl ? idx++ : -1;
     const int fileTransferIdx = idx++;
     const int settingsIdx = idx;
 
@@ -207,8 +199,6 @@ void HomeActivity::loop() {
       onRecentsOpen();
     } else if (menuSelectedIndex == flashcardIdx) {
       onFlashcardOpen();
-    } else if (menuSelectedIndex == opdsLibraryIdx) {
-      onOpdsBrowserOpen();
     } else if (menuSelectedIndex == fileTransferIdx) {
       onFileTransferOpen();
     } else if (menuSelectedIndex == settingsIdx) {
@@ -234,16 +224,9 @@ void HomeActivity::render(Activity::RenderLock&&) {
                           recentBooks, selectorIndex, coverRendered, coverBufferStored, bufferRestored,
                           std::bind(&HomeActivity::storeCoverBuffer, this));
 
-  // Build menu items dynamically
   std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), tr(STR_MENU_RECENT_BOOKS), "Flashcards",
                                         tr(STR_FILE_TRANSFER), tr(STR_SETTINGS_TITLE)};
   std::vector<UIIcon> menuIcons = {Folder, Recent, Library, Transfer, Settings};
-
-  if (hasOpdsUrl) {
-    // Insert OPDS Browser after Flashcards
-    menuItems.insert(menuItems.begin() + 3, tr(STR_OPDS_BROWSER));
-    menuIcons.insert(menuIcons.begin() + 3, Library);
-  }
 
   GUI.drawButtonMenu(
       renderer,

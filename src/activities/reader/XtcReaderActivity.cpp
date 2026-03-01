@@ -68,36 +68,32 @@ void XtcReaderActivity::loop() {
   // Side DOWN: short=prev page, long=-10 pages
   const unsigned long longPressMs = 600;
 
-  // Front LEFT: short=prev, long=home (on release)
-  if (mappedInput.wasReleasedAnyOf(HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM)) {
-    if (mappedInput.getHeldTime() >= 1000) {
-      onGoHome();
-      return;
-    }
+  // Front LEFT: short=prev, long=home (snappy)
+  if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_BACK, 1000) || 
+      mappedInput.wasLongPressedRaw(HalGPIO::BTN_CONFIRM, 1000)) {
+    onGoHome();
+    return;
   }
-  const bool frontLeftShort = mappedInput.wasReleasedAnyOf(HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM) &&
-                              mappedInput.getHeldTime() < 1000;
+  const bool frontLeftShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_BACK, 1000) || 
+                              mappedInput.wasShortPressedRaw(HalGPIO::BTN_CONFIRM, 1000);
 
-  // Front RIGHT: short=next, long=chapter menu (on release to avoid bleed-through)
-  const bool frontRightReleased = mappedInput.wasReleasedAnyOf(HalGPIO::BTN_LEFT, HalGPIO::BTN_RIGHT);
-  if (frontRightReleased && mappedInput.getHeldTime() >= longPressMs) {
-    if (xtc && xtc->hasChapters() && !xtc->getChapters().empty()) {
-      exitActivity();
-      enterNewActivity(new XtcReaderChapterSelectionActivity(
-          this->renderer, this->mappedInput, xtc, currentPage,
-          [this] { exitActivity(); requestUpdate(); },
-          [this](const uint32_t newPage) { currentPage = newPage; exitActivity(); requestUpdate(); }));
-      return;
-    }
+  // Front RIGHT: short=next, long=dark mode (snappy)
+  if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_LEFT, 500) || 
+      mappedInput.wasLongPressedRaw(HalGPIO::BTN_RIGHT, 500)) {
+    SETTINGS.darkMode = !SETTINGS.darkMode;
+    SETTINGS.saveToFile();
+    requestUpdate();
+    return;
   }
-  const bool frontRightShort = frontRightReleased && mappedInput.getHeldTime() < longPressMs;
+  const bool frontRightShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_LEFT, 500) || 
+                               mappedInput.wasShortPressedRaw(HalGPIO::BTN_RIGHT, 500);
 
   // Side UP: short=next, long=+10
-  const bool sideUpShort  = mappedInput.wasReleasedRaw(HalGPIO::BTN_UP)  && mappedInput.getHeldTime() < longPressMs;
-  const bool sideUpLong   = mappedInput.wasLongPressed(MappedInputManager::Button::Up, longPressMs);
+  const bool sideUpShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_UP, 500);
+  const bool sideUpLong  = mappedInput.wasLongPressedRaw(HalGPIO::BTN_UP, 500);
   // Side DOWN: short=prev, long=-10
-  const bool sideDownShort = mappedInput.wasReleasedRaw(HalGPIO::BTN_DOWN) && mappedInput.getHeldTime() < longPressMs;
-  const bool sideDownLong  = mappedInput.wasLongPressed(MappedInputManager::Button::Down, longPressMs);
+  const bool sideDownShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_DOWN, 500);
+  const bool sideDownLong  = mappedInput.wasLongPressedRaw(HalGPIO::BTN_DOWN, 500);
 
   int skipAmount = 0;
   if (sideUpLong)          skipAmount = 10;
@@ -177,8 +173,8 @@ void XtcReaderActivity::renderPage() {
     return;
   }
 
-  // Clear screen first
-  renderer.clearScreen();
+  // Clear screen first - black in dark mode, white otherwise
+  renderer.clearScreen(SETTINGS.darkMode ? 0x00 : 0xFF);
 
   // Copy page bitmap using GfxRenderer's drawPixel
   // XTC/XTCH pages are pre-rendered with status bar included, so render full page
@@ -197,7 +193,6 @@ void XtcReaderActivity::renderPage() {
     const uint8_t* plane2 = pageBuffer + planeSize;  // Bit2 plane
     const size_t colBytes = (pageHeight + 7) / 8;    // Bytes per column (100 for 800 height)
 
-    // Lambda to get pixel value at (x, y)
     auto getPixelValue = [&](uint16_t x, uint16_t y) -> uint8_t {
       const size_t colIndex = pageWidth - 1 - x;
       const size_t byteInCol = y / 8;
@@ -221,11 +216,20 @@ void XtcReaderActivity::renderPage() {
     LOG_DBG("XTR", "Pixel distribution: White=%lu, DarkGrey=%lu, LightGrey=%lu, Black=%lu", pixelCounts[0],
             pixelCounts[1], pixelCounts[2], pixelCounts[3]);
 
-    // Pass 1: BW buffer - draw all non-white pixels as black
+    // Pass 1: BW buffer - draw pixels (inverted in Dark Mode)
     for (uint16_t y = 0; y < pageHeight; y++) {
       for (uint16_t x = 0; x < pageWidth; x++) {
-        if (getPixelValue(x, y) >= 1) {
-          renderer.drawPixel(x, y, true);
+        const uint8_t val = getPixelValue(x, y);
+        if (SETTINGS.darkMode) {
+          // Dark Mode: Background is Black. Draw original darker pixels (val>=1) as White (false).
+          if (val >= 1) {
+            renderer.drawPixel(x, y, false);
+          }
+        } else {
+          // Normal Mode: Background is White. Draw non-White (val>=1) as Black (true).
+          if (val >= 1) {
+            renderer.drawPixel(x, y, true);
+          }
         }
       }
     }
@@ -239,51 +243,57 @@ void XtcReaderActivity::renderPage() {
       pagesUntilFullRefresh--;
     }
 
-    // Pass 2: LSB buffer - mark DARK gray only (XTH value 1)
-    // In LUT: 0 bit = apply gray effect, 1 bit = untouched
-    renderer.clearScreen(0x00);
-    for (uint16_t y = 0; y < pageHeight; y++) {
-      for (uint16_t x = 0; x < pageWidth; x++) {
-        if (getPixelValue(x, y) == 1) {  // Dark grey only
-          renderer.drawPixel(x, y, false);
+    // Pass 2 & 3: Skip grayscale overlay in Dark Mode to ensure high contrast
+    if (!SETTINGS.darkMode) {
+      // (Keep existing Pass 2 & 3 logic for normal mode)
+      renderer.clearScreen(0x00);
+      for (uint16_t y = 0; y < pageHeight; y++) {
+        for (uint16_t x = 0; x < pageWidth; x++) {
+          if (getPixelValue(x, y) == 1) {  // Dark grey only
+            renderer.drawPixel(x, y, false);
+          }
         }
       }
-    }
-    renderer.copyGrayscaleLsbBuffers();
+      renderer.copyGrayscaleLsbBuffers();
 
-    // Pass 3: MSB buffer - mark LIGHT AND DARK gray (XTH value 1 or 2)
-    // In LUT: 0 bit = apply gray effect, 1 bit = untouched
-    renderer.clearScreen(0x00);
-    for (uint16_t y = 0; y < pageHeight; y++) {
-      for (uint16_t x = 0; x < pageWidth; x++) {
-        const uint8_t pv = getPixelValue(x, y);
-        if (pv == 1 || pv == 2) {  // Dark grey or Light grey
-          renderer.drawPixel(x, y, false);
+      renderer.clearScreen(0x00);
+      for (uint16_t y = 0; y < pageHeight; y++) {
+        for (uint16_t x = 0; x < pageWidth; x++) {
+          const uint8_t pv = getPixelValue(x, y);
+          if (pv == 1 || pv == 2) {  // Dark grey or Light grey
+            renderer.drawPixel(x, y, false);
+          }
         }
       }
-    }
-    renderer.copyGrayscaleMsbBuffers();
+      renderer.copyGrayscaleMsbBuffers();
+      renderer.displayGrayBuffer();
 
-    // Display grayscale overlay
-    renderer.displayGrayBuffer();
-
-    // Pass 4: Re-render BW to framebuffer (restore for next frame, instead of restoreBwBuffer)
-    renderer.clearScreen();
-    for (uint16_t y = 0; y < pageHeight; y++) {
-      for (uint16_t x = 0; x < pageWidth; x++) {
-        if (getPixelValue(x, y) >= 1) {
-          renderer.drawPixel(x, y, true);
+      // Pass 4: Re-render BW to framebuffer (RESTORE for next frame)
+      // We ONLY do this in normal mode because in Dark Mode, Pass 1 already left the correct inverted image in the buffer.
+      renderer.clearScreen(0xFF);
+      for (uint16_t y = 0; y < pageHeight; y++) {
+        for (uint16_t x = 0; x < pageWidth; x++) {
+          if (getPixelValue(x, y) >= 1) {
+            renderer.drawPixel(x, y, true);
+          }
         }
       }
+      renderer.cleanupGrayscaleWithFrameBuffer();
+    } else {
+        // In Dark Mode, we don't need to re-render. Pass 1 already drew the inverted page.
+        // But we MUST re-render the status bar so it appears on the PHYSICAL screen if it wasn't part of the BW pass.
     }
-
-    // Cleanup grayscale buffers with current frame buffer
-    renderer.cleanupGrayscaleWithFrameBuffer();
 
     free(pageBuffer);
 
     // Overlay status bar on top of the rendered page bitmap
     renderStatusBar();
+    
+    // In Dark Mode, because we didn't call displayGrayBuffer, we might need a final displayBuffer 
+    // to ensure the Status Bar (rendered AFTER Pass 1's displayBuffer) is actually shown.
+    if (SETTINGS.darkMode) {
+        renderer.displayBuffer(HalDisplay::FAST_REFRESH);
+    }
 
     LOG_DBG("XTR", "Rendered page %lu/%lu (2-bit grayscale)", currentPage + 1, xtc->getPageCount());
     return;
@@ -298,10 +308,18 @@ void XtcReaderActivity::renderPage() {
         // Read source pixel (MSB first, bit 7 = leftmost pixel)
         const size_t srcByte = srcRowStart + srcX / 8;
         const size_t srcBit = 7 - (srcX % 8);
-        const bool isBlack = !((pageBuffer[srcByte] >> srcBit) & 1);  // XTC: 0 = black, 1 = white
+        const bool isBlackRaw = !((pageBuffer[srcByte] >> srcBit) & 1);  // XTC: 0 = black, 1 = white
 
-        if (isBlack) {
-          renderer.drawPixel(srcX, srcY, true);
+        if (SETTINGS.darkMode) {
+          // Background is Black. Draw original Black (isBlackRaw=true) as White (false).
+          if (isBlackRaw) {
+            renderer.drawPixel(srcX, srcY, false);
+          }
+        } else {
+          // Background is White. Draw original Black (isBlackRaw=true) as Black (true).
+          if (isBlackRaw) {
+            renderer.drawPixel(srcX, srcY, true);
+          }
         }
       }
     }
@@ -352,7 +370,10 @@ void XtcReaderActivity::renderStatusBar() const {
   const float progress = (totalPages > 0) ? (static_cast<float>(currentPage + 1) / totalPages * 100.0f) : 0.0f;
 
   // Clear the status bar strip so it's readable regardless of page content
-  renderer.fillRect(0, textY - 2, screenWidth, screenHeight - (textY - 2), false);
+  renderer.fillRect(0, textY - 2, screenWidth, screenHeight - (textY - 2), SETTINGS.darkMode);
+
+  // Status bar text color
+  const bool textColor = !SETTINGS.darkMode;  // White in dark mode, black otherwise
 
   // Page progress text (right-aligned)
   int progressTextWidth = 0;
@@ -364,7 +385,7 @@ void XtcReaderActivity::renderStatusBar() const {
       snprintf(progressStr, sizeof(progressStr), "%lu/%lu", currentPage + 1, totalPages);
     }
     progressTextWidth = renderer.getTextWidth(SMALL_FONT_ID, progressStr);
-    renderer.drawText(SMALL_FONT_ID, screenWidth - progressTextWidth - 4, textY, progressStr);
+    renderer.drawText(SMALL_FONT_ID, screenWidth - progressTextWidth - 4, textY, progressStr, textColor);
   }
 
   // Thin progress bar at very bottom

@@ -11,8 +11,6 @@
 #include "CrossPointState.h"
 #include "EpubReaderChapterSelectionActivity.h"
 #include "EpubReaderPercentSelectionActivity.h"
-#include "KOReaderCredentialStore.h"
-#include "KOReaderSyncActivity.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "components/UITheme.h"
@@ -171,21 +169,18 @@ void EpubReaderActivity::loop() {
   // Side DOWN: short=prev page, long=-10 pages
   const unsigned long longPressMs = 600;
 
-  // Front LEFT cluster: short=prev page, long=go home
-  // Both checked on RELEASE to avoid bleed-through into next activity
-  if (mappedInput.wasReleasedAnyOf(HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM)) {
-    if (mappedInput.getHeldTime() >= 1000) {
-      onGoHome();
-      return;
-    }
+  // Front LEFT cluster: short=prev page, long=go home (snappy)
+  if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_BACK, 1000) || 
+      mappedInput.wasLongPressedRaw(HalGPIO::BTN_CONFIRM, 1000)) {
+    onGoHome();
+    return;
   }
-  const bool frontLeftShort = mappedInput.wasReleasedAnyOf(HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM) &&
-                              mappedInput.getHeldTime() < 1000;
+  const bool frontLeftShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_BACK, 1000) || 
+                              mappedInput.wasShortPressedRaw(HalGPIO::BTN_CONFIRM, 1000);
 
-  // Front RIGHT cluster: short=next page, long=reader menu
-  // Triggered on RELEASE to avoid stale button events leaking into the menu activity
-  const bool frontRightReleased = mappedInput.wasReleasedAnyOf(HalGPIO::BTN_LEFT, HalGPIO::BTN_RIGHT);
-  if (frontRightReleased && mappedInput.getHeldTime() >= longPressMs) {
+  // Front RIGHT cluster: short=next page, long=reader menu (snappy)
+  if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_LEFT, 500) || 
+      mappedInput.wasLongPressedRaw(HalGPIO::BTN_RIGHT, 500)) {
     const int currentPage = section ? section->currentPage + 1 : 0;
     const int totalPages = section ? section->pageCount : 0;
     float bookProgress = 0.0f;
@@ -194,7 +189,6 @@ void EpubReaderActivity::loop() {
       bookProgress = epub->calculateProgress(currentSpineIndex, chapterProgress) * 100.0f;
     }
     const int bookProgressPercent = clampPercent(static_cast<int>(bookProgress + 0.5f));
-    skipNextButtonCheck = true;
     exitActivity();
     enterNewActivity(new EpubReaderMenuActivity(
         this->renderer, this->mappedInput, epub->getTitle(), currentPage, totalPages, bookProgressPercent,
@@ -202,19 +196,16 @@ void EpubReaderActivity::loop() {
         [this](EpubReaderMenuActivity::MenuAction action) { onReaderMenuConfirm(action); }));
     return;
   }
-  const bool frontRightShort = frontRightReleased && mappedInput.getHeldTime() < longPressMs;
+  const bool frontRightShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_LEFT, 500) || 
+                               mappedInput.wasShortPressedRaw(HalGPIO::BTN_RIGHT, 500);
 
   // Side UP: short = next page, long = +10 pages
-  const bool sideUpReleased = mappedInput.wasReleasedRaw(HalGPIO::BTN_UP);
-  const bool sideUpShort = sideUpReleased && mappedInput.getHeldTime() < longPressMs;
-  const bool sideUpLong = mappedInput.wasLongPressed(MappedInputManager::Button::Up, longPressMs) &&
-                          !mappedInput.isPressedRaw(HalGPIO::BTN_DOWN);
+  const bool sideUpShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_UP, 500);
+  const bool sideUpLong  = mappedInput.wasLongPressedRaw(HalGPIO::BTN_UP, 500);
 
   // Side DOWN: short = prev page, long = -10 pages
-  const bool sideDownReleased = mappedInput.wasReleasedRaw(HalGPIO::BTN_DOWN);
-  const bool sideDownShort = sideDownReleased && mappedInput.getHeldTime() < longPressMs;
-  const bool sideDownLong = mappedInput.wasLongPressed(MappedInputManager::Button::Down, longPressMs) &&
-                            !mappedInput.isPressedRaw(HalGPIO::BTN_UP);
+  const bool sideDownShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_DOWN, 500);
+  const bool sideDownLong  = mappedInput.wasLongPressedRaw(HalGPIO::BTN_DOWN, 500);
 
   if (!frontLeftShort && !frontRightShort && !sideUpShort && !sideUpLong && !sideDownShort && !sideDownLong) {
     return;
@@ -435,29 +426,6 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
       }
       exitActivity();
       requestUpdate();
-      break;
-    }
-    case EpubReaderMenuActivity::MenuAction::SYNC: {
-      if (KOREADER_STORE.hasCredentials()) {
-        const int currentPage = section ? section->currentPage : 0;
-        const int totalPages = section ? section->pageCount : 0;
-        exitActivity();
-        enterNewActivity(new KOReaderSyncActivity(
-            renderer, mappedInput, epub, epub->getPath(), currentSpineIndex, currentPage, totalPages,
-            [this]() {
-              // On cancel - defer exit to avoid use-after-free
-              pendingSubactivityExit = true;
-            },
-            [this](int newSpineIndex, int newPage) {
-              // On sync complete - update position and defer exit
-              if (currentSpineIndex != newSpineIndex || (section && section->currentPage != newPage)) {
-                currentSpineIndex = newSpineIndex;
-                nextPageNumber = newPage;
-                section.reset();
-              }
-              pendingSubactivityExit = true;
-            }));
-      }
       break;
     }
   }

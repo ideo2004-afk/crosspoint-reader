@@ -14,12 +14,8 @@ enum class SettingType { TOGGLE, ENUM, ACTION, VALUE, STRING };
 
 enum class SettingAction {
   None,
-  KOReaderSync,
-  OPDSBrowser,
   Network,
   ClearCache,
-  CheckForUpdates,
-  Language,
 };
 
 struct SettingInfo {

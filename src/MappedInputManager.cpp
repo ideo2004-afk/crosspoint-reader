@@ -51,18 +51,34 @@ bool MappedInputManager::mapButton(const Button button, bool (HalGPIO::*fn)(uint
 
 void MappedInputManager::update() {
   gpio.update();
-  // Clear long press flag for any logical buttons released this frame
-  // Check each logical button
-  for (int i = 0; i <= static_cast<int>(Button::PageForward); i++) {
-    if (wasReleased(static_cast<Button>(i))) {
-      firedLongPressMask &= ~(1 << i);
+  // Clear masks for any buttons released or not pressed
+  for (int i = 0; i < 16; i++) {
+    // Logical buttons
+    if (i <= static_cast<int>(Button::PageForward)) {
+      if (!isPressed(static_cast<Button>(i))) {
+        firedLongPressMask &= ~(1 << i);
+      }
+    }
+    // Physical buttons (BTN_UP is 4, BTN_DOWN is 5, etc. from InputManager.h)
+    if (!gpio.isPressed(i)) {
+      firedLongPressRawMask &= ~(1 << i);
     }
   }
 }
 
 bool MappedInputManager::wasPressed(const Button button) const { return mapButton(button, &HalGPIO::wasPressed); }
 
-bool MappedInputManager::wasReleased(const Button button) const { return mapButton(button, &HalGPIO::wasReleased); }
+bool MappedInputManager::wasReleased(const Button button) const { 
+  if (mapButton(button, &HalGPIO::wasReleased)) {
+    int bit = static_cast<int>(button);
+    if (ignoreNextReleaseMask & (1 << bit)) {
+      ignoreNextReleaseMask &= ~(1 << bit);
+      return false;
+    }
+    return true;
+  }
+  return false;
+}
 
 bool MappedInputManager::isPressed(const Button button) const { return mapButton(button, &HalGPIO::isPressed); }
 
@@ -81,6 +97,18 @@ bool MappedInputManager::wasLongPressed(const Button button, const unsigned long
     int bit = static_cast<int>(button);
     if (!(firedLongPressMask & (1 << bit))) {
       firedLongPressMask |= (1 << bit);
+      ignoreNextReleaseMask |= (1 << bit);
+      
+      // Also protect the physical buttons in this cluster
+      if (button == Button::Back) {
+        ignoreNextReleaseRawMask |= (1 << HalGPIO::BTN_BACK) | (1 << HalGPIO::BTN_CONFIRM);
+      } else if (button == Button::Confirm) {
+        ignoreNextReleaseRawMask |= (1 << HalGPIO::BTN_LEFT) | (1 << HalGPIO::BTN_RIGHT);
+      } else if (button == Button::Up) {
+        ignoreNextReleaseRawMask |= (1 << HalGPIO::BTN_UP);
+      } else if (button == Button::Down) {
+        ignoreNextReleaseRawMask |= (1 << HalGPIO::BTN_DOWN);
+      }
       return true;
     }
   }
@@ -95,19 +123,10 @@ MappedInputManager::Labels MappedInputManager::mapLabels(const char* back, const
                                                          const char* next) const {
   // Build the label order based on the configured hardware mapping.
   auto labelForHardware = [&](uint8_t hw) -> const char* {
-    // Compare against configured logical roles and return the matching label.
-    if (hw == SETTINGS.frontButtonBack) {
-      return back;
-    }
-    if (hw == SETTINGS.frontButtonConfirm) {
-      return confirm;
-    }
-    if (hw == SETTINGS.frontButtonLeft) {
-      return previous;
-    }
-    if (hw == SETTINGS.frontButtonRight) {
-      return next;
-    }
+    if (hw == SETTINGS.frontButtonBack) return back;
+    if (hw == SETTINGS.frontButtonConfirm) return confirm;
+    if (hw == SETTINGS.frontButtonLeft) return previous;
+    if (hw == SETTINGS.frontButtonRight) return next;
     return "";
   };
 
@@ -116,31 +135,47 @@ MappedInputManager::Labels MappedInputManager::mapLabels(const char* back, const
 }
 
 int MappedInputManager::getPressedFrontButton() const {
-  // Scan the raw front buttons in hardware order.
-  // This bypasses remapping so the remap activity can capture physical presses.
-  if (gpio.wasPressed(HalGPIO::BTN_BACK)) {
-    return HalGPIO::BTN_BACK;
-  }
-  if (gpio.wasPressed(HalGPIO::BTN_CONFIRM)) {
-    return HalGPIO::BTN_CONFIRM;
-  }
-  if (gpio.wasPressed(HalGPIO::BTN_LEFT)) {
-    return HalGPIO::BTN_LEFT;
-  }
-  if (gpio.wasPressed(HalGPIO::BTN_RIGHT)) {
-    return HalGPIO::BTN_RIGHT;
-  }
+  if (gpio.wasPressed(HalGPIO::BTN_BACK)) return HalGPIO::BTN_BACK;
+  if (gpio.wasPressed(HalGPIO::BTN_CONFIRM)) return HalGPIO::BTN_CONFIRM;
+  if (gpio.wasPressed(HalGPIO::BTN_LEFT)) return HalGPIO::BTN_LEFT;
+  if (gpio.wasPressed(HalGPIO::BTN_RIGHT)) return HalGPIO::BTN_RIGHT;
   return -1;
 }
 
-bool MappedInputManager::wasReleasedRaw(uint8_t buttonIndex) const { return gpio.wasReleased(buttonIndex); }
+bool MappedInputManager::wasReleasedRaw(uint8_t buttonIndex) const { 
+  if (gpio.wasReleased(buttonIndex)) {
+    if (ignoreNextReleaseRawMask & (1 << buttonIndex)) {
+      ignoreNextReleaseRawMask &= ~(1 << buttonIndex);
+      return false;
+    }
+    return true;
+  }
+  return false;
+}
 
 bool MappedInputManager::isPressedRaw(uint8_t buttonIndex) const { return gpio.isPressed(buttonIndex); }
 
 bool MappedInputManager::wasReleasedAnyOf(uint8_t a, uint8_t b) const {
-  return gpio.wasReleased(a) || gpio.wasReleased(b);
+  bool releasedA = wasReleasedRaw(a);
+  bool releasedB = wasReleasedRaw(b);
+  return releasedA || releasedB;
 }
 
 bool MappedInputManager::isPressedAnyOf(uint8_t a, uint8_t b) const {
   return gpio.isPressed(a) || gpio.isPressed(b);
+}
+
+bool MappedInputManager::wasLongPressedRaw(uint8_t buttonIndex, unsigned long threshold) {
+  if (gpio.isPressed(buttonIndex) && gpio.getHeldTime() >= threshold) {
+    if (!(firedLongPressRawMask & (1 << buttonIndex))) {
+      firedLongPressRawMask |= (1 << buttonIndex);
+      ignoreNextReleaseRawMask |= (1 << buttonIndex);
+      return true;
+    }
+  }
+  return false;
+}
+
+bool MappedInputManager::wasShortPressedRaw(uint8_t buttonIndex, unsigned long threshold) const {
+  return wasReleasedRaw(buttonIndex) && gpio.getHeldTime() < threshold;
 }

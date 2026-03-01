@@ -12,18 +12,19 @@
 class RecentBooksActivity final : public Activity {
  private:
   ButtonNavigator buttonNavigator;
-
   size_t selectorIndex = 0;
-
-  // Recent tab state
   std::vector<RecentBook> recentBooks;
 
-  // Callbacks
   const std::function<void(const std::string& path)> onSelectBook;
   const std::function<void()> onGoHome;
 
+  bool recentsLoading = false;
+  bool recentsLoaded = false;
+  bool firstRenderDone = false;
+
   // Data loading
   void loadRecentBooks();
+  void loadRecentCovers(int coverHeight);
 
  public:
   explicit RecentBooksActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,

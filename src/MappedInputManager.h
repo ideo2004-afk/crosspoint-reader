@@ -35,9 +35,15 @@ class MappedInputManager {
   bool wasReleasedAnyOf(uint8_t a, uint8_t b) const;
   bool isPressedAnyOf(uint8_t a, uint8_t b) const;
 
+  bool wasLongPressedRaw(uint8_t buttonIndex, unsigned long threshold = 500);
+  bool wasShortPressedRaw(uint8_t buttonIndex, unsigned long threshold = 500) const;
+
  private:
   HalGPIO& gpio;
-  uint16_t firedLongPressMask = 0;
+  mutable uint16_t firedLongPressMask = 0;
+  mutable uint16_t firedLongPressRawMask = 0;
+  mutable uint16_t ignoreNextReleaseMask = 0;
+  mutable uint16_t ignoreNextReleaseRawMask = 0;
 
   bool mapButton(Button button, bool (HalGPIO::*fn)(uint8_t) const) const;
 };

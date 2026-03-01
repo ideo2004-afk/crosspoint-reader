@@ -20,6 +20,17 @@ void EpubReaderMenuActivity::loop() {
     return;
   }
 
+  if (skipNextButtonCheck) {
+    const bool confirmCleared = !mappedInput.isPressed(MappedInputManager::Button::Confirm) &&
+                                !mappedInput.wasReleased(MappedInputManager::Button::Confirm);
+    const bool rightCleared = !mappedInput.isPressed(MappedInputManager::Button::Right) &&
+                              !mappedInput.wasReleased(MappedInputManager::Button::Right);
+    if (confirmCleared && rightCleared) {
+      skipNextButtonCheck = false;
+    }
+    return;
+  }
+
   // Handle navigation
   buttonNavigator.onNext([this] {
     selectedIndex = ButtonNavigator::nextIndex(selectedIndex, static_cast<int>(menuItems.size()));

@@ -15,12 +15,10 @@
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
-#include "KOReaderCredentialStore.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "activities/boot_sleep/BootActivity.h"
 #include "activities/boot_sleep/SleepActivity.h"
-#include "activities/browser/OpdsBookBrowserActivity.h"
 #include "activities/home/HomeActivity.h"
 #include "activities/home/MyLibraryActivity.h"
 #include "activities/home/RecentBooksActivity.h"
@@ -268,11 +266,6 @@ void onGoToMyLibraryWithPath(const std::string& path) {
   enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader, path));
 }
 
-void onGoToBrowser() {
-  exitActivity();
-  enterNewActivity(new OpdsBookBrowserActivity(renderer, mappedInputManager, onGoHome));
-}
-
 void onGoToFlashcard() {
   exitActivity();
   enterNewActivity(new FlashcardActivity(renderer, mappedInputManager, onGoHome));
@@ -281,7 +274,7 @@ void onGoToFlashcard() {
 void onGoHome() {
   exitActivity();
   enterNewActivity(new HomeActivity(renderer, mappedInputManager, onGoToReader, onGoToMyLibrary, onGoToRecentBooks,
-                                    onGoToSettings, onGoToFileTransfer, onGoToBrowser, onGoToFlashcard));
+                                    onGoToSettings, onGoToFileTransfer, onGoToFlashcard));
 }
 
 void setupDisplayAndFonts() {
@@ -345,7 +338,6 @@ void setup() {
 
   SETTINGS.loadFromFile();
   I18N.loadSettings();
-  KOREADER_STORE.loadFromFile();
   UITheme::getInstance().reload();
   ButtonNavigator::setMappedInputManager(mappedInputManager);
 

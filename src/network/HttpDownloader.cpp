@@ -31,12 +31,7 @@ bool HttpDownloader::fetchUrl(const std::string& url, Stream& outContent) {
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.addHeader("User-Agent", "CrossPoint-ESP32-" CROSSPOINT_VERSION);
 
-  // Add Basic HTTP auth if credentials are configured
-  if (strlen(SETTINGS.opdsUsername) > 0 && strlen(SETTINGS.opdsPassword) > 0) {
-    std::string credentials = std::string(SETTINGS.opdsUsername) + ":" + SETTINGS.opdsPassword;
-    String encoded = base64::encode(credentials.c_str());
-    http.addHeader("Authorization", "Basic " + encoded);
-  }
+
 
   const int httpCode = http.GET();
   if (httpCode != HTTP_CODE_OK) {
@@ -82,12 +77,7 @@ HttpDownloader::DownloadError HttpDownloader::downloadToFile(const std::string& 
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.addHeader("User-Agent", "CrossPoint-ESP32-" CROSSPOINT_VERSION);
 
-  // Add Basic HTTP auth if credentials are configured
-  if (strlen(SETTINGS.opdsUsername) > 0 && strlen(SETTINGS.opdsPassword) > 0) {
-    std::string credentials = std::string(SETTINGS.opdsUsername) + ":" + SETTINGS.opdsPassword;
-    String encoded = base64::encode(credentials.c_str());
-    http.addHeader("Authorization", "Basic " + encoded);
-  }
+
 
   const int httpCode = http.GET();
   if (httpCode != HTTP_CODE_OK) {

@@ -18,6 +18,7 @@ parser.add_argument("--2bit", dest="is2Bit", action="store_true", help="generate
 parser.add_argument("--additional-intervals", dest="additional_intervals", action="append", help="Additional code point intervals to export as min,max. This argument can be repeated.")
 parser.add_argument("--compress", dest="compress", action="store_true", help="Compress glyph bitmaps using DEFLATE with group-based compression.")
 parser.add_argument("--force-autohint", dest="force_autohint", action="store_true", help="Force FreeType auto-hinter instead of native font hinting. Improves stem width consistency for fonts with weak or no native TrueType hints.")
+parser.add_argument("--char-file", dest="char_file", action="store", help="File containing specific characters to include.")
 args = parser.parse_args()
 
 GlyphProps = namedtuple("GlyphProps", ["width", "height", "advance_x", "left", "top", "data_length", "data_offset", "code_point"])
@@ -107,6 +108,13 @@ intervals = [
 add_ints = []
 if args.additional_intervals:
     add_ints = [tuple([int(n, base=0) for n in i.split(",")]) for i in args.additional_intervals]
+
+if args.char_file:
+    with open(args.char_file, 'r', encoding='utf-8') as f:
+        file_chars = f.read()
+        for c in file_chars:
+            if c.strip() or c in ' \n\t': # include everything basically, wait strip won't include spaces if we want them, but spaces are in 0x0020 anyway
+                add_ints.append((ord(c), ord(c)))
 
 def norm_floor(val):
     return int(math.floor(val / (1 << 6)))
