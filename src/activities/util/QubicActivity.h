@@ -38,7 +38,7 @@ class QubicActivity final : public Activity {
 
   void renderBoard(bool fullRefresh = false);
   void renderEscMenu();
-  void handleInput();
+  bool handleInput();
   void makeAiMove();
   
   // Coordinate helpers for Isometric rendering

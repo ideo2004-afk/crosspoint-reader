@@ -26,14 +26,14 @@ void QubicActivity::onExit() {}
 
 void QubicActivity::loop() {
   if (inEscMenu || !isAiThinking) {
-      handleInput();
+      if (handleInput()) return; // Prevent Use-After-Free if activity was deleted
   }
   if (isAiThinking && millis() - aiThinkStartTime > 1200) {
     makeAiMove();
   }
 }
 
-void QubicActivity::handleInput() {
+bool QubicActivity::handleInput() {
   bool moved = false;
   
   // Handle Escape Menu Input
@@ -52,10 +52,10 @@ void QubicActivity::handleInput() {
               aiDifficulty = escMenuIndex; // L1, L2, L3
               inEscMenu = false;
               onEnter(); // Restart game
-              return;
+              return false;
           } else if (escMenuIndex == 4) {
               onGoBack(); // Exit
-              return;
+              return true; // Signal that activity is deleted
           }
       }
       
@@ -65,7 +65,7 @@ void QubicActivity::handleInput() {
       }
       
       if (moved) renderBoard(false);
-      return;
+      return false;
   }
 
   // Side Buttons: Layer Selection
@@ -110,7 +110,7 @@ void QubicActivity::handleInput() {
       inEscMenu = true;
       escMenuIndex = 0;
       renderBoard(false);
-      return;
+      return false;
   }
 
   if (confirmPressed) {
@@ -119,8 +119,9 @@ void QubicActivity::handleInput() {
               onEnter();
           } else {
               onGoBack();
+              return true; // Signal that activity is deleted
           }
-          return;
+          return false;
       } else {
           int idx = cursorZ * 16 + cursorY * 4 + cursorX;
           if (engine.makeMove(idx, QubicEngine::Human)) {
@@ -144,6 +145,8 @@ void QubicActivity::handleInput() {
   if (moved) {
     renderBoard(false);
   }
+  
+  return false;
 }
 
 void QubicActivity::makeAiMove() {
