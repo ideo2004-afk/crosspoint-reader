@@ -18,6 +18,8 @@
 #include "components/icons/file24.h"
 #include "components/icons/folder.h"
 #include "components/icons/folder24.h"
+#include "components/icons/game.h"
+#include "components/icons/game24.h"
 #include "components/icons/hotspot.h"
 #include "components/icons/image24.h"
 #include "components/icons/library.h"
@@ -56,6 +58,8 @@ const uint8_t* iconForName(UIIcon icon, int size) {
         return Book24Icon;
       case UIIcon::File:
         return File24Icon;
+      case UIIcon::Game:
+        return Game24Icon;
       default:
         return nullptr;
     }
@@ -77,6 +81,8 @@ const uint8_t* iconForName(UIIcon icon, int size) {
         return WifiIcon;
       case UIIcon::Hotspot:
         return HotspotIcon;
+      case UIIcon::Game:
+        return GameIcon;
       default:
         return nullptr;
     }

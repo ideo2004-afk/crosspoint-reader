@@ -21,7 +21,7 @@
 #include "util/StringUtils.h"
 
 int HomeActivity::getMenuItemCount() const {
-  int count = 5;  // My Library, Recents, Flashcards, File transfer, Settings
+  int count = 6;  // My Library, Recents, Flashcards, File transfer, Settings, Qubic
   if (!recentBooks.empty()) {
     count += recentBooks.size();
   }
@@ -188,8 +188,9 @@ void HomeActivity::loop() {
     const int myLibraryIdx = idx++;
     const int recentsIdx = idx++;
     const int flashcardIdx = idx++;
+    const int qubicIdx = idx++;
     const int fileTransferIdx = idx++;
-    const int settingsIdx = idx;
+    const int settingsIdx = idx++;
 
     if (selectorIndex < recentBooks.size()) {
       onSelectBook(recentBooks[selectorIndex].path);
@@ -199,6 +200,8 @@ void HomeActivity::loop() {
       onRecentsOpen();
     } else if (menuSelectedIndex == flashcardIdx) {
       onFlashcardOpen();
+    } else if (menuSelectedIndex == qubicIdx) {
+      onQubicOpen();
     } else if (menuSelectedIndex == fileTransferIdx) {
       onFileTransferOpen();
     } else if (menuSelectedIndex == settingsIdx) {
@@ -225,8 +228,8 @@ void HomeActivity::render(Activity::RenderLock&&) {
                           std::bind(&HomeActivity::storeCoverBuffer, this));
 
   std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), tr(STR_MENU_RECENT_BOOKS), "Flashcards",
-                                        tr(STR_FILE_TRANSFER), tr(STR_SETTINGS_TITLE)};
-  std::vector<UIIcon> menuIcons = {Folder, Recent, Library, Transfer, Settings};
+                                        "3D Tic-Tac-Toe", tr(STR_FILE_TRANSFER), tr(STR_SETTINGS_TITLE)};
+  std::vector<UIIcon> menuIcons = {Folder, Recent, Library, Game, Transfer, Settings};
 
   GUI.drawButtonMenu(
       renderer,

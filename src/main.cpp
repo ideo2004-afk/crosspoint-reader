@@ -27,6 +27,7 @@
 #include "activities/settings/SettingsActivity.h"
 #include "activities/util/FlashcardActivity.h"
 #include "activities/util/FullScreenMessageActivity.h"
+#include "activities/util/QubicActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/ButtonNavigator.h"
@@ -251,6 +252,11 @@ void onGoToSettings() {
   enterNewActivity(new SettingsActivity(renderer, mappedInputManager, onGoHome));
 }
 
+void onGoToQubic() {
+  exitActivity();
+  enterNewActivity(new QubicActivity(renderer, mappedInputManager, onGoHome));
+}
+
 void onGoToMyLibrary() {
   exitActivity();
   enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader));
@@ -274,7 +280,7 @@ void onGoToFlashcard() {
 void onGoHome() {
   exitActivity();
   enterNewActivity(new HomeActivity(renderer, mappedInputManager, onGoToReader, onGoToMyLibrary, onGoToRecentBooks,
-                                    onGoToSettings, onGoToFileTransfer, onGoToFlashcard));
+                                    onGoToSettings, onGoToFileTransfer, onGoToFlashcard, onGoToQubic));
 }
 
 void setupDisplayAndFonts() {
