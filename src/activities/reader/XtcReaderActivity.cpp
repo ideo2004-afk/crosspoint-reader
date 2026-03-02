@@ -443,21 +443,23 @@ void XtcReaderActivity::renderStatusBar() const {
   const bool textColor = !SETTINGS.darkMode;
 
   const int y = screenHeight - 15;
+  const int sideMargin = 24;
+  const int availableWidth = screenWidth - (sideMargin * 2);
   
   // 1px track (thin)
-  renderer.fillRect(0, y + 2, screenWidth, 1, textColor);
+  renderer.fillRect(sideMargin, y + 2, availableWidth, 1, textColor);
   
   // 3px progress (thick)
   if (totalPages > 0) {
-    int progressWidth = (static_cast<long>(currentPage + 1) * screenWidth) / totalPages;
-    if (progressWidth > screenWidth) progressWidth = screenWidth;
-    renderer.fillRect(0, y, progressWidth, 3, textColor);
+    int progressWidth = (static_cast<long>(currentPage + 1) * availableWidth) / totalPages;
+    if (progressWidth > availableWidth) progressWidth = availableWidth;
+    renderer.fillRect(sideMargin, y, progressWidth, 3, textColor);
 
     // Draw page number (small text, right aligned above track)
     char pageBuf[16];
     snprintf(pageBuf, sizeof(pageBuf), "%lu", (unsigned long)(currentPage + 1));
     int textWidth = renderer.getTextWidth(SMALL_FONT_ID, pageBuf);
-    renderer.drawText(SMALL_FONT_ID, screenWidth - textWidth - 4, y - renderer.getLineHeight(SMALL_FONT_ID), pageBuf, textColor);
+    renderer.drawText(SMALL_FONT_ID, sideMargin + availableWidth - textWidth, y - renderer.getLineHeight(SMALL_FONT_ID), pageBuf, textColor);
   }
 }
 
