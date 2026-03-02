@@ -38,11 +38,7 @@ class CrossPointSettings {
   // Status bar display type enum
   enum STATUS_BAR_MODE {
     NONE = 0,
-    NO_PROGRESS = 1,
-    FULL = 2,
-    BOOK_PROGRESS_BAR = 3,
-    ONLY_BOOK_PROGRESS_BAR = 4,
-    CHAPTER_PROGRESS_BAR = 5,
+    SIMPLE = 1,
     STATUS_BAR_MODE_COUNT
   };
 
@@ -80,7 +76,7 @@ class CrossPointSettings {
   enum SIDE_BUTTON_LAYOUT { PREV_NEXT = 0, NEXT_PREV = 1, SIDE_BUTTON_LAYOUT_COUNT };
 
   // Font family options
-  enum FONT_FAMILY { BOOKERLY = 0, NOTOSANS = 1, OPENDYSLEXIC = 2, TAIPEISANS = 3, FONT_FAMILY_COUNT };
+  enum FONT_FAMILY { BOOKERLY = 0, NOTOSANS = 1, FONT_FAMILY_COUNT };
   // Font size options
   enum FONT_SIZE { SMALL = 0, MEDIUM = 1, LARGE = 2, EXTRA_LARGE = 3, FONT_SIZE_COUNT };
   enum LINE_COMPRESSION { TIGHT = 0, NORMAL = 1, WIDE = 2, LINE_COMPRESSION_COUNT };
@@ -120,7 +116,7 @@ class CrossPointSettings {
   enum HIDE_BATTERY_PERCENTAGE { HIDE_NEVER = 0, HIDE_READER = 1, HIDE_ALWAYS = 2, HIDE_BATTERY_PERCENTAGE_COUNT };
 
   // UI Theme
-  enum UI_THEME { CLASSIC = 0, LYRA = 1, LYRA_3_COVERS = 2, ROUNDED_RAFF = 3 };
+  enum UI_THEME { CLASSIC = 0, LYRA = 1, LYRA_3_COVERS = 2 };
 
   // Sleep screen settings
   uint8_t sleepScreen = DARK;
@@ -129,7 +125,7 @@ class CrossPointSettings {
   // Sleep screen cover filter
   uint8_t sleepScreenCoverFilter = NO_FILTER;
   // Status bar settings
-  uint8_t statusBar = FULL;
+  uint8_t statusBar = SIMPLE;
   // Text rendering settings
   uint8_t extraParagraphSpacing = 1;
   uint8_t textAntiAliasing = 1;

@@ -359,26 +359,12 @@ void XtcReaderActivity::renderStatusBar() const {
     return;
   }
 
-  const auto& metrics = UITheme::getInstance().getMetrics();
   const int screenHeight = renderer.getScreenHeight();
   const int screenWidth = renderer.getScreenWidth();
   constexpr int marginBottom = 4;  // pixels from bottom of screen to text baseline
   const int textY = screenHeight - marginBottom - renderer.getLineHeight(SMALL_FONT_ID);
 
-  const bool showProgressBar =
-      SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::BOOK_PROGRESS_BAR ||
-      SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::ONLY_BOOK_PROGRESS_BAR ||
-      SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::CHAPTER_PROGRESS_BAR;
-  const bool showProgressText =
-      SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL ||
-      SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::BOOK_PROGRESS_BAR;
-  const bool showBattery =
-      SETTINGS.statusBar != CrossPointSettings::STATUS_BAR_MODE::ONLY_BOOK_PROGRESS_BAR;
-  const bool showBatteryPercentage =
-      SETTINGS.hideBatteryPercentage == CrossPointSettings::HIDE_BATTERY_PERCENTAGE::HIDE_NEVER;
-
   const size_t totalPages = xtc->getPageCount();
-  const float progress = (totalPages > 0) ? (static_cast<float>(currentPage + 1) / totalPages * 100.0f) : 0.0f;
 
   // Clear the status bar strip so it's readable regardless of page content
   renderer.fillRect(0, textY - 2, screenWidth, screenHeight - (textY - 2), SETTINGS.darkMode);
@@ -386,28 +372,13 @@ void XtcReaderActivity::renderStatusBar() const {
   // Status bar text color
   const bool textColor = !SETTINGS.darkMode;  // White in dark mode, black otherwise
 
-  // Page progress text (right-aligned)
-  int progressTextWidth = 0;
-  if (showProgressText) {
-    char progressStr[32];
-    if (SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL) {
-      snprintf(progressStr, sizeof(progressStr), "%lu/%lu  %.0f%%", currentPage + 1, totalPages, progress);
-    } else {
-      snprintf(progressStr, sizeof(progressStr), "%lu/%lu", currentPage + 1, totalPages);
-    }
-    progressTextWidth = renderer.getTextWidth(SMALL_FONT_ID, progressStr);
-    renderer.drawText(SMALL_FONT_ID, screenWidth - progressTextWidth - 4, textY, progressStr, textColor);
-  }
+  char progressStr[32];
+  snprintf(progressStr, sizeof(progressStr), "%lu / %lu", currentPage + 1, totalPages);
 
-  // Thin progress bar at very bottom
-  if (showProgressBar) {
-    GUI.drawReadingProgressBar(renderer, static_cast<size_t>(progress));
-  }
+  int progressTextWidth = renderer.getTextWidth(SMALL_FONT_ID, progressStr);
+  int xPos = (screenWidth - progressTextWidth) / 2;
 
-  // Battery (left-aligned)
-  if (showBattery) {
-    GUI.drawBatteryLeft(renderer, Rect{4, textY, metrics.batteryWidth, metrics.batteryHeight}, showBatteryPercentage);
-  }
+  renderer.drawText(SMALL_FONT_ID, xPos, textY, progressStr, textColor);
 }
 
 void XtcReaderActivity::saveProgress() const {

@@ -170,8 +170,12 @@ void RecentBooksActivity::render(Activity::RenderLock&&) {
 
       int col = i % columns;
       int row = i / columns;
+      
+      // Increase vertical spacing between rows for a less cramped look
+      int rowSpacing = metrics.verticalSpacing + 15; 
+      
       int x = metrics.contentSidePadding + (col * (coverWidth + metrics.verticalSpacing));
-      int y = contentTop + gridTopOffset + (row * (coverHeight + metrics.verticalSpacing));
+      int y = contentTop + gridTopOffset + (row * (coverHeight + rowSpacing));
 
       Rect coverRect(x, y, coverWidth, coverHeight);
 
@@ -194,12 +198,10 @@ void RecentBooksActivity::render(Activity::RenderLock&&) {
         renderer.drawIcon(BookIcon, x + (coverWidth-32)/2, y + (coverHeight-32)/2, 32, 32);
       }
 
-      // Draw selection box around active element
+      // Draw selection box around active element (1px thick)
       if (i == selectorIndex) {
         // drawRect takes a bool state for black (true) vs white (false)
         renderer.drawRect(coverRect.x - 4, coverRect.y - 4, coverRect.width + 8, coverRect.height + 8, true);
-        renderer.drawRect(coverRect.x - 3, coverRect.y - 3, coverRect.width + 6, coverRect.height + 6, true);
-        renderer.drawRect(coverRect.x - 5, coverRect.y - 5, coverRect.width + 10, coverRect.height + 10, true);
       }
     }
   }
