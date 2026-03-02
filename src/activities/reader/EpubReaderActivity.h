@@ -22,6 +22,8 @@ class EpubReaderActivity final : public ActivityWithSubactivity {
   bool pendingGoHome = false;           // Defer go home to avoid race condition with display task
   bool pendingScreenshot = false;
   bool skipNextButtonCheck = false;  // Skip button processing for one frame after subactivity exit
+  uint32_t sessionStartMillis = 0;
+  
   const std::function<void()> onGoBack;
   const std::function<void()> onGoHome;
 

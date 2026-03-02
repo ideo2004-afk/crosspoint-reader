@@ -12,6 +12,7 @@
 #include <HalStorage.h>
 #include <I18n.h>
 
+#include "ReadingStatsStore.h"
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "MappedInputManager.h"
@@ -41,6 +42,9 @@ void XtcReaderActivity::onEnter() {
   APP_STATE.openEpubPath = xtc->getPath();
   APP_STATE.saveToFile();
   RECENT_BOOKS.addBook(xtc->getPath(), xtc->getTitle(), xtc->getAuthor(), xtc->getThumbBmpPath());
+  READING_STATS.recordOpen(xtc->getPath(), xtc->getTitle());
+
+  sessionStartMillis = millis();
 
   // Trigger first update
   requestUpdate();
@@ -48,6 +52,13 @@ void XtcReaderActivity::onEnter() {
 
 void XtcReaderActivity::onExit() {
   ActivityWithSubactivity::onExit();
+
+  if (sessionStartMillis > 0 && xtc) {
+    uint32_t elapsedSeconds = (millis() - sessionStartMillis) / 1000;
+    READING_STATS.addReadingTime(xtc->getPath(), xtc->getTitle(), elapsedSeconds);
+    READING_STATS.saveToFile();
+    sessionStartMillis = 0;
+  }
 
   APP_STATE.readerActivityLoadCount = 0;
   APP_STATE.saveToFile();

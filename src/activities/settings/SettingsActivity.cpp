@@ -8,6 +8,7 @@
 #include "MappedInputManager.h"
 #include "SettingsList.h"
 #include "activities/network/WifiSelectionActivity.h"
+#include "activities/settings/ReadingStatsActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -39,6 +40,7 @@ void SettingsActivity::onEnter() {
 
   // Append device-only ACTION items
   systemSettings.push_back(SettingInfo::Action(StrId::STR_WIFI_NETWORKS, SettingAction::Network));
+  systemSettings.push_back(SettingInfo::Action(StrId::STR_READING_STATS, SettingAction::ReadingStats));
   systemSettings.push_back(SettingInfo::Action(StrId::STR_CLEAR_READING_CACHE, SettingAction::ClearCache));
 
   // Reset selection to first category
@@ -172,6 +174,9 @@ void SettingsActivity::toggleCurrentSetting() {
         break;
       case SettingAction::ClearCache:
         enterSubActivity(new ClearCacheActivity(renderer, mappedInput, onComplete));
+        break;
+      case SettingAction::ReadingStats:
+        enterSubActivity(new ReadingStatsActivity(renderer, mappedInput, onComplete));
         break;
       case SettingAction::None:
         // Do nothing

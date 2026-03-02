@@ -16,6 +16,7 @@ class XtcReaderActivity final : public ActivityWithSubactivity {
 
   uint32_t currentPage = 0;
   int pagesUntilFullRefresh = 0;
+  uint32_t sessionStartMillis = 0;
 
   const std::function<void()> onGoBack;
   const std::function<void()> onGoHome;

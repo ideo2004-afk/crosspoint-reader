@@ -23,6 +23,7 @@ class TxtReaderActivity final : public ActivityWithSubactivity {
   int linesPerPage = 0;
   int viewportWidth = 0;
   bool initialized = false;
+  uint32_t sessionStartMillis = 0;
 
   // Cached settings for cache validation (different fonts/margins require re-indexing)
   int cachedFontId = 0;

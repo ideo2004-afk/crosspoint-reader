@@ -492,7 +492,16 @@ void LyraTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
     }
 
     // Wrap title to up to 3 lines (word-wrap by advance width)
-    const std::string& lastBookTitle = book.title;
+    std::string filename = book.path;
+    size_t lastSlash = filename.find_last_of('/');
+    if (lastSlash != std::string::npos) {
+      filename = filename.substr(lastSlash + 1);
+    }
+    size_t lastDot = filename.find_last_of('.');
+    if (lastDot != std::string::npos && lastDot > 0) {
+      filename = filename.substr(0, lastDot);
+    }
+    const std::string& lastBookTitle = filename;
     std::vector<std::string> words;
     words.reserve(8);
     std::string::size_type wordStart = 0;

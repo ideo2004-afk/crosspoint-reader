@@ -16,6 +16,7 @@ enum class SettingAction {
   None,
   Network,
   ClearCache,
+  ReadingStats,
 };
 
 struct SettingInfo {

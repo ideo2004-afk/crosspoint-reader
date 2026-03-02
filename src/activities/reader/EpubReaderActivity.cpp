@@ -15,6 +15,7 @@
 #include "RecentBooksStore.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
+#include "ReadingStatsStore.h"
 #include "util/ScreenshotUtil.h"
 
 namespace {
@@ -99,6 +100,9 @@ void EpubReaderActivity::onEnter() {
   APP_STATE.openEpubPath = epub->getPath();
   APP_STATE.saveToFile();
   RECENT_BOOKS.addBook(epub->getPath(), epub->getTitle(), epub->getAuthor(), epub->getThumbBmpPath());
+  READING_STATS.recordOpen(epub->getPath(), epub->getTitle());
+
+  sessionStartMillis = millis();
 
   // Trigger first update
   requestUpdate();
@@ -106,6 +110,13 @@ void EpubReaderActivity::onEnter() {
 
 void EpubReaderActivity::onExit() {
   ActivityWithSubactivity::onExit();
+
+  if (sessionStartMillis > 0 && epub) {
+    uint32_t elapsedSeconds = (millis() - sessionStartMillis) / 1000;
+    READING_STATS.addReadingTime(epub->getPath(), epub->getTitle(), elapsedSeconds);
+    READING_STATS.saveToFile();
+    sessionStartMillis = 0;
+  }
 
   // Reset orientation back to portrait for the rest of the UI
   renderer.setOrientation(GfxRenderer::Orientation::Portrait);

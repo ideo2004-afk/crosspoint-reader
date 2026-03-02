@@ -92,20 +92,23 @@ uint8_t quantize(int gray, int x, int y) {
   }
 }
 
-// 1-bit noise dithering for fast home screen rendering
-// Uses hash-based noise for consistent dithering that works well at small sizes
+// 8x8 Bayer matrix for Ordered Dithering (produces clean halftone dots like newspaper)
+static const uint8_t bayer8x8[8][8] = {
+    {  0, 128,  32, 160,   8, 136,  40, 168},
+    {192,  64, 224,  96, 200,  72, 232, 104},
+    { 48, 176,  16, 144,  56, 184,  24, 152},
+    {240, 112, 208,  80, 248, 120, 216,  88},
+    { 12, 140,  44, 172,   4, 132,  36, 164},
+    {204,  76, 236, 108, 196,  68, 228, 100},
+    { 60, 188,  28, 156,  52, 180,  20, 148},
+    {252, 124, 220,  92, 244, 116, 212,  84}
+};
+
+// 1-bit Ordered Dithering for clean home screen rendering
 uint8_t quantize1bit(int gray, int x, int y) {
   gray = adjustPixel(gray);
-
-  // Generate noise threshold using integer hash (no regular pattern to alias)
-  uint32_t hash = static_cast<uint32_t>(x) * 374761393u + static_cast<uint32_t>(y) * 668265263u;
-  hash = (hash ^ (hash >> 13)) * 1274126177u;
-  const int threshold = static_cast<int>(hash >> 24);  // 0-255
-
-  // Simple threshold with noise: gray >= (128 + noise offset) -> white
-  // The noise adds variation around the 128 midpoint
-  const int adjustedThreshold = 128 + ((threshold - 128) / 2);  // Range: 64-192
-  return (gray >= adjustedThreshold) ? 1 : 0;
+  // Bayer matrix thresholds range from 0 to 252.
+  return (gray > bayer8x8[y % 8][x % 8]) ? 1 : 0;
 }
 
 void createBmpHeader(BmpHeader* bmpHeader, int width, int height) {

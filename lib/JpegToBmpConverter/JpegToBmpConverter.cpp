@@ -311,8 +311,9 @@ bool JpegToBmpConverter::jpegFileToBmpStreamInternal(FsFile& jpegFile, Print& bm
   Atkinson1BitDitherer* atkinson1BitDitherer = nullptr;
 
   if (oneBit) {
-    // For 1-bit output, use Atkinson dithering for better quality
-    atkinson1BitDitherer = new Atkinson1BitDitherer(outWidth);
+    // For 1-bit output, use the clean Bayer Ordered Dithering (quantize1bit)
+    // instead of error diffusion (Atkinson) which causes noisy artifacts.
+    atkinson1BitDitherer = nullptr;
   } else if (!USE_8BIT_OUTPUT) {
     if (USE_ATKINSON) {
       atkinsonDitherer = new AtkinsonDitherer(outWidth);

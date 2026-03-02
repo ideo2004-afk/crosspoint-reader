@@ -10,6 +10,7 @@
 #include "CrossPointState.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
+#include "ReadingStatsStore.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -57,6 +58,9 @@ void TxtReaderActivity::onEnter() {
   APP_STATE.openEpubPath = filePath;
   APP_STATE.saveToFile();
   RECENT_BOOKS.addBook(filePath, fileName, "", "");
+  READING_STATS.recordOpen(filePath, fileName);
+
+  sessionStartMillis = millis();
 
   // Trigger first update
   requestUpdate();
@@ -64,6 +68,15 @@ void TxtReaderActivity::onEnter() {
 
 void TxtReaderActivity::onExit() {
   ActivityWithSubactivity::onExit();
+
+  if (sessionStartMillis > 0 && txt) {
+    auto filePath = txt->getPath();
+    auto fileName = filePath.substr(filePath.rfind('/') + 1);
+    uint32_t elapsedSeconds = (millis() - sessionStartMillis) / 1000;
+    READING_STATS.addReadingTime(filePath, fileName, elapsedSeconds);
+    READING_STATS.saveToFile();
+    sessionStartMillis = 0;
+  }
 
   // Reset orientation back to portrait for the rest of the UI
   renderer.setOrientation(GfxRenderer::Orientation::Portrait);

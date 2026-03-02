@@ -87,8 +87,17 @@ void Lyra3CoversTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, con
       bool bookSelected = (selectorIndex == i);
 
       int tileX = Lyra3CoversMetrics::values.contentSidePadding + tileWidth * i;
+      std::string filename = recentBooks[i].path;
+      size_t lastSlash = filename.find_last_of('/');
+      if (lastSlash != std::string::npos) {
+        filename = filename.substr(lastSlash + 1);
+      }
+      size_t lastDot = filename.find_last_of('.');
+      if (lastDot != std::string::npos && lastDot > 0) {
+        filename = filename.substr(0, lastDot);
+      }
       auto title =
-          renderer.truncatedText(UI_10_FONT_ID, recentBooks[i].title.c_str(), tileWidth - 2 * hPaddingInSelection);
+          renderer.truncatedText(UI_10_FONT_ID, filename.c_str(), tileWidth - 2 * hPaddingInSelection);
 
       if (bookSelected) {
         // Draw selection box

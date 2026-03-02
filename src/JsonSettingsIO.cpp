@@ -9,6 +9,7 @@
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
+#include "ReadingStatsStore.h"
 #include "RecentBooksStore.h"
 #include "WifiCredentialStore.h"
 
@@ -221,5 +222,54 @@ bool JsonSettingsIO::loadRecentBooks(RecentBooksStore& store, const char* json) 
   }
 
   LOG_DBG("RBS", "Recent books loaded from file (%d entries)", store.getCount());
+  return true;
+}
+
+// ---- ReadingStatsStore ----
+
+bool JsonSettingsIO::saveReadingStats(const ReadingStatsStore& store, const char* path) {
+  JsonDocument doc;
+  doc["total_reading_seconds"] = store.totalReadingSeconds;
+  
+  JsonObject booksObj = doc["books"].to<JsonObject>();
+  for (const auto& pair : store.books) {
+    const auto& stat = pair.second;
+    JsonObject obj = booksObj[stat.path].to<JsonObject>();
+    obj["title"] = stat.title;
+    obj["reading_seconds"] = stat.readingSeconds;
+    obj["open_count"] = stat.openCount;
+  }
+
+  String json;
+  serializeJson(doc, json);
+  return Storage.writeFile(path, json);
+}
+
+bool JsonSettingsIO::loadReadingStats(ReadingStatsStore& store, const char* json) {
+  JsonDocument doc;
+  auto error = deserializeJson(doc, json);
+  if (error) {
+    LOG_ERR("RSS", "JSON parse error: %s", error.c_str());
+    return false;
+  }
+
+  store.books.clear();
+  store.totalReadingSeconds = doc["total_reading_seconds"] | (uint32_t)0;
+
+  JsonObject booksObj = doc["books"].as<JsonObject>();
+  for (JsonPair kv : booksObj) {
+    std::string path = kv.key().c_str();
+    JsonObject obj = kv.value().as<JsonObject>();
+    
+    BookStats stat;
+    stat.path = path;
+    stat.title = obj["title"] | std::string("");
+    stat.readingSeconds = obj["reading_seconds"] | (uint32_t)0;
+    stat.openCount = obj["open_count"] | (uint32_t)0;
+    
+    store.books[path] = stat;
+  }
+
+  LOG_DBG("RSS", "Reading stats loaded from file (%zu entries)", store.books.size());
   return true;
 }
