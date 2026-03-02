@@ -13,12 +13,10 @@
 #include <I18n.h>
 
 #include "ReadingStatsStore.h"
+#include "RecentBooksStore.h"
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "MappedInputManager.h"
-#include "RecentBooksStore.h"
-#include "XtcReaderChapterSelectionActivity.h"
-#include "components/UITheme.h"
 #include "fontIds.h"
 
 namespace {
@@ -72,12 +70,50 @@ void XtcReaderActivity::loop() {
     return;
   }
 
-  // === Custom Fixed Button Layout ===
-  // Front LEFT cluster (BACK+CONFIRM): short=prev, long=home
-  // Front RIGHT cluster (LEFT+RIGHT): short=next, long=chapter menu
-  // Side UP: short=next page, long=+10 pages
-  // Side DOWN: short=prev page, long=-10 pages
   const unsigned long longPressMs = 600;
+
+  // === Menu Input Handling ===
+  if (inMenu) {
+    if (mappedInput.wasReleasedRaw(HalGPIO::BTN_UP)) {
+      menuSelectedIndex = (menuSelectedIndex > 0) ? menuSelectedIndex - 1 : 4;
+      requestUpdate();
+    } else if (mappedInput.wasReleasedRaw(HalGPIO::BTN_DOWN)) {
+      menuSelectedIndex = (menuSelectedIndex < 4) ? menuSelectedIndex + 1 : 0;
+      requestUpdate();
+    } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Confirm)) {
+      // Execute Menu Action (Right Cluster)
+      inMenu = false;
+      if (menuSelectedIndex == 0) { // Resume
+        requestUpdate();
+      } else if (menuSelectedIndex == 1) { // Next 10%
+        jumpPercent(10);
+      } else if (menuSelectedIndex == 2) { // Back 10%
+        jumpPercent(-10);
+      } else if (menuSelectedIndex == 3) { // Dark Mode Toggle
+        SETTINGS.darkMode = !SETTINGS.darkMode;
+        SETTINGS.saveToFile();
+        requestUpdate();
+      } else if (menuSelectedIndex == 4) { // Exit
+        onGoHome();
+      }
+      return;
+    } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Back)) {
+      // Resume/Cancel (Left Cluster)
+      inMenu = false;
+      requestUpdate();
+      return;
+    } else if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_BACK, longPressMs) || 
+               mappedInput.wasLongPressedRaw(HalGPIO::BTN_CONFIRM, longPressMs) ||
+               mappedInput.wasLongPressedRaw(HalGPIO::BTN_LEFT, longPressMs) ||
+               mappedInput.wasLongPressedRaw(HalGPIO::BTN_RIGHT, longPressMs)) {
+      inMenu = false;
+      requestUpdate();
+      return;
+    }
+    return;
+  }
+
+  // === Custom Fixed Button Layout ===
 
   // Front LEFT: short=prev, long=home (snappy)
   if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_BACK, 1000) || 
@@ -88,11 +124,12 @@ void XtcReaderActivity::loop() {
   const bool frontLeftShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_BACK, 1000) || 
                               mappedInput.wasShortPressedRaw(HalGPIO::BTN_CONFIRM, 1000);
 
-  // Front RIGHT: short=next, long=dark mode (snappy)
+  // Front RIGHT: short=next, long=menu (snappy)
   if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_LEFT, 500) || 
       mappedInput.wasLongPressedRaw(HalGPIO::BTN_RIGHT, 500)) {
-    SETTINGS.darkMode = !SETTINGS.darkMode;
-    SETTINGS.saveToFile();
+    renderer.storeBwBuffer();
+    inMenu = true;
+    menuSelectedIndex = 0;
     requestUpdate();
     return;
   }
@@ -131,6 +168,10 @@ void XtcReaderActivity::loop() {
 }
 
 void XtcReaderActivity::render(Activity::RenderLock&&) {
+  if (inMenu) {
+    renderMenu();
+    return;
+  }
   if (!xtc) {
     return;
   }
@@ -146,6 +187,40 @@ void XtcReaderActivity::render(Activity::RenderLock&&) {
 
   renderPage();
   saveProgress();
+}
+
+void XtcReaderActivity::renderMenu() const {
+  renderer.restoreBwBuffer();
+
+  const int sw = renderer.getScreenWidth();
+  const int sh = renderer.getScreenHeight();
+  const int mw = 320;
+  const int mh = 330;
+  const int mx = (sw - mw) / 2;
+  const int my = (sh - mh) / 2;
+
+  const bool darkMode = SETTINGS.darkMode;
+  const bool textColor = !darkMode;
+
+  // Border and Background
+  renderer.fillRect(mx - 4, my - 4, mw + 8, mh + 8, textColor);
+  renderer.fillRect(mx, my, mw, mh, darkMode);
+
+  renderer.drawText(UI_12_FONT_ID, mx + 20, my + 20, "Reader Menu", textColor, EpdFontFamily::BOLD);
+
+  const char* options[] = {"Resume", "Next 10%", "Back 10%", 
+                           darkMode ? "Day Mode" : "Dark Mode", "Exit"};
+  
+  for (int i = 0; i < 5; i++) {
+    int ry = my + 65 + (i * 50);
+    if (menuSelectedIndex == i) {
+      renderer.fillRect(mx + 10, ry - 5, mw - 20, 40, textColor);
+    }
+    
+    renderer.drawText(UI_12_FONT_ID, mx + 20, ry + 2, options[i], (menuSelectedIndex != i) ? textColor : darkMode);
+  }
+
+  renderer.displayBuffer();
 }
 
 void XtcReaderActivity::renderPage() {
@@ -365,20 +440,25 @@ void XtcReaderActivity::renderStatusBar() const {
   const int textY = screenHeight - marginBottom - renderer.getLineHeight(SMALL_FONT_ID);
 
   const size_t totalPages = xtc->getPageCount();
+  const bool textColor = !SETTINGS.darkMode;
 
-  // Clear the status bar strip so it's readable regardless of page content
-  renderer.fillRect(0, textY - 2, screenWidth, screenHeight - (textY - 2), SETTINGS.darkMode);
+  const int y = screenHeight - 15;
+  
+  // 1px track (thin)
+  renderer.fillRect(0, y + 2, screenWidth, 1, textColor);
+  
+  // 3px progress (thick)
+  if (totalPages > 0) {
+    int progressWidth = (static_cast<long>(currentPage + 1) * screenWidth) / totalPages;
+    if (progressWidth > screenWidth) progressWidth = screenWidth;
+    renderer.fillRect(0, y, progressWidth, 3, textColor);
 
-  // Status bar text color
-  const bool textColor = !SETTINGS.darkMode;  // White in dark mode, black otherwise
-
-  char progressStr[32];
-  snprintf(progressStr, sizeof(progressStr), "%lu / %lu", currentPage + 1, totalPages);
-
-  int progressTextWidth = renderer.getTextWidth(SMALL_FONT_ID, progressStr);
-  int xPos = (screenWidth - progressTextWidth) / 2;
-
-  renderer.drawText(SMALL_FONT_ID, xPos, textY, progressStr, textColor);
+    // Draw page number (small text, right aligned above track)
+    char pageBuf[16];
+    snprintf(pageBuf, sizeof(pageBuf), "%lu", (unsigned long)(currentPage + 1));
+    int textWidth = renderer.getTextWidth(SMALL_FONT_ID, pageBuf);
+    renderer.drawText(SMALL_FONT_ID, screenWidth - textWidth - 4, y - renderer.getLineHeight(SMALL_FONT_ID), pageBuf, textColor);
+  }
 }
 
 void XtcReaderActivity::saveProgress() const {
@@ -409,4 +489,20 @@ void XtcReaderActivity::loadProgress() {
     }
     f.close();
   }
+}
+
+void XtcReaderActivity::jumpPercent(int deltaPercent) {
+  if (!xtc) return;
+  size_t total = xtc->getPageCount();
+  if (total == 0) return;
+
+  int deltaPages = (static_cast<int>(total) * deltaPercent) / 100;
+  if (deltaPages == 0) deltaPages = (deltaPercent > 0) ? 1 : -1;
+
+  int targetPage = static_cast<int>(currentPage) + deltaPages;
+  if (targetPage < 0) targetPage = 0;
+  if (targetPage >= (int)total) targetPage = (int)total - 1;
+
+  currentPage = static_cast<uint32_t>(targetPage);
+  requestUpdate();
 }

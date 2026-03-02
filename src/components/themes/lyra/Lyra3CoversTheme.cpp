@@ -97,7 +97,7 @@ void Lyra3CoversTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, con
         filename = filename.substr(0, lastDot);
       }
       auto title =
-          renderer.truncatedText(UI_10_FONT_ID, filename.c_str(), tileWidth - 2 * hPaddingInSelection);
+          renderer.truncatedText(SMALL_FONT_ID, filename.c_str(), tileWidth - 2 * hPaddingInSelection);
 
       if (bookSelected) {
         // Draw selection box
@@ -110,7 +110,7 @@ void Lyra3CoversTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, con
         renderer.fillRoundedRect(tileX, tileY + Lyra3CoversMetrics::values.homeCoverHeight + hPaddingInSelection,
                                  tileWidth, bookTitleHeight, cornerRadius, false, false, true, true, Color::LightGray);
       }
-      renderer.drawText(UI_10_FONT_ID, tileX + hPaddingInSelection,
+      renderer.drawText(SMALL_FONT_ID, tileX + hPaddingInSelection,
                         tileY + tileHeight - bookTitleHeight + hPaddingInSelection + 5, title.c_str(), true);
     }
   } else {

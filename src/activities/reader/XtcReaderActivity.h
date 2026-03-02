@@ -21,10 +21,15 @@ class XtcReaderActivity final : public ActivityWithSubactivity {
   const std::function<void()> onGoBack;
   const std::function<void()> onGoHome;
 
+  bool inMenu = false;
+  int menuSelectedIndex = 0;
+
   void renderPage();
   void renderStatusBar() const;
+  void renderMenu() const;
   void saveProgress() const;
   void loadProgress();
+  void jumpPercent(int deltaPercent);
 
  public:
   explicit XtcReaderActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::unique_ptr<Xtc> xtc,

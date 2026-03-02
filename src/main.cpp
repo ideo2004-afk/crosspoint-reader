@@ -309,8 +309,8 @@ void setupDisplayAndFonts() {
   renderer.insertFont(OPENDYSLEXIC_12_FONT_ID, opendyslexic12FontFamily);
   renderer.insertFont(OPENDYSLEXIC_14_FONT_ID, opendyslexic14FontFamily);
 #endif  // OMIT_FONTS
-  renderer.insertFont(UI_10_FONT_ID, ui10FontFamily);
-  renderer.insertFont(UI_12_FONT_ID, ui12FontFamily);
+  renderer.insertFont(UI_10_FONT_ID, notosans12FontFamily);
+  renderer.insertFont(UI_12_FONT_ID, notosans12FontFamily);
   renderer.insertFont(SMALL_FONT_ID, smallFontFamily);
   renderer.insertFont(NOTOSANS_16_TC_FONT_ID, notosans16TcFontFamily);
   renderer.setFallbackFont(NOTOSANS_16_TC_FONT_ID);

@@ -44,7 +44,7 @@ bool QubicActivity::handleInput() {
       } else if (mappedInput.wasReleasedRaw(HalGPIO::BTN_DOWN)) {
           escMenuIndex = (escMenuIndex < 4) ? escMenuIndex + 1 : 0;
           moved = true;
-      } else if (mappedInput.wasShortPressedRaw(HalGPIO::BTN_BACK) || mappedInput.wasShortPressedRaw(HalGPIO::BTN_CONFIRM)) {
+      } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Confirm)) {
           if (escMenuIndex == 0) {
               inEscMenu = false; // Resume
               moved = true;
@@ -57,6 +57,9 @@ bool QubicActivity::handleInput() {
               onGoBack(); // Exit
               return true; // Signal that activity is deleted
           }
+      } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Back)) {
+          inEscMenu = false; // Resume/Cancel
+          moved = true;
       }
       
       if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_BACK) || mappedInput.wasLongPressedRaw(HalGPIO::BTN_CONFIRM)) {

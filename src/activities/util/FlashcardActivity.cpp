@@ -391,12 +391,12 @@ void FlashcardActivity::loop() {
     } else if (mappedInput.wasReleased(MappedInputManager::Button::Down)) {
       deckSelectedIndex = (deckSelectedIndex + 1) % decks.size();
       renderDeckMenu(false);
-    } else if (mappedInput.wasReleasedAnyOf(HalGPIO::BTN_LEFT, HalGPIO::BTN_RIGHT)) {
+    } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Confirm)) {
       inDeckSelection = false;
       loadFileList(decks[deckSelectedIndex]);
       showRandomCard();
-    } else if (mappedInput.wasReleasedAnyOf(HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM)) {
-      if (mappedInput.getHeldTime() >= longPressMs) { if (onGoBack) onGoBack(); }
+    } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Back)) {
+      if (onGoBack) onGoBack();
     }
     return;
   }
@@ -408,8 +408,7 @@ void FlashcardActivity::loop() {
     } else if (mappedInput.wasReleased(MappedInputManager::Button::Down)) {
       subMenuSelectedIndex = (subMenuSelectedIndex + 1) % 5;
       renderSubMenu();
-    } else if (mappedInput.wasReleasedAnyOf(HalGPIO::BTN_LEFT, HalGPIO::BTN_RIGHT) || 
-               mappedInput.wasReleasedAnyOf(HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM)) {
+    } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Confirm)) {
       inSubMenu = false;
       if (subMenuSelectedIndex == 0) { renderCard(currentIndex, isShowingBack, false); } 
       else if (subMenuSelectedIndex == 1) { showFirstCard(); } 
@@ -420,6 +419,9 @@ void FlashcardActivity::loop() {
         showRandomCard();
       }
       else if (subMenuSelectedIndex == 4) { if (onGoBack) onGoBack(); } 
+    } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Back)) {
+      inSubMenu = false;
+      renderCard(currentIndex, isShowingBack, false);
     }
     return;
   }

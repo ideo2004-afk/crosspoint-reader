@@ -180,6 +180,50 @@ void EpubReaderActivity::loop() {
   // Side DOWN: short=prev page, long=-10 pages
   const unsigned long longPressMs = 600;
 
+  // === Menu Input Handling ===
+  if (inMenu) {
+    const int optionCount = 8; // Resume, TOC, Next 10%, Back 10%, Dark Mode, Orientation, Screenshot, Exit
+    if (mappedInput.wasReleasedRaw(HalGPIO::BTN_UP)) {
+      menuSelectedIndex = (menuSelectedIndex > 0) ? menuSelectedIndex - 1 : optionCount - 1;
+      requestUpdate();
+    } else if (mappedInput.wasReleasedRaw(HalGPIO::BTN_DOWN)) {
+      menuSelectedIndex = (menuSelectedIndex < optionCount - 1) ? menuSelectedIndex + 1 : 0;
+      requestUpdate();
+    } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Confirm)) {
+      // Execute Menu Action (Right Cluster)
+      inMenu = false;
+      skipNextButtonCheck = true;
+      switch (menuSelectedIndex) {
+        case 0: break; // Resume
+        case 1: onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction::SELECT_CHAPTER); return;
+        case 2: jumpPercent(10); break;
+        case 3: jumpPercent(-10); break;
+        case 4: 
+          SETTINGS.darkMode = !SETTINGS.darkMode;
+          SETTINGS.saveToFile();
+          break;
+        case 5: onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction::ROTATE_SCREEN); break;
+        case 6: onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction::SCREENSHOT); break;
+        case 7: onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction::GO_HOME); return;
+      }
+      requestUpdate();
+      return;
+    } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Back)) {
+      // Resume/Cancel (Left Cluster)
+      inMenu = false;
+      requestUpdate();
+      return;
+    } else if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_BACK, longPressMs) || 
+               mappedInput.wasLongPressedRaw(HalGPIO::BTN_CONFIRM, longPressMs) ||
+               mappedInput.wasLongPressedRaw(HalGPIO::BTN_LEFT, longPressMs) ||
+               mappedInput.wasLongPressedRaw(HalGPIO::BTN_RIGHT, longPressMs)) {
+      inMenu = false;
+      requestUpdate();
+      return;
+    }
+    return;
+  }
+
   // Front LEFT cluster: short=prev page, long=go home (snappy)
   if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_BACK, 1000) || 
       mappedInput.wasLongPressedRaw(HalGPIO::BTN_CONFIRM, 1000)) {
@@ -189,22 +233,13 @@ void EpubReaderActivity::loop() {
   const bool frontLeftShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_BACK, 1000) || 
                               mappedInput.wasShortPressedRaw(HalGPIO::BTN_CONFIRM, 1000);
 
-  // Front RIGHT cluster: short=next page, long=reader menu (snappy)
+  // Front RIGHT cluster: short=next page, long=menu (snappy)
   if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_LEFT, 500) || 
       mappedInput.wasLongPressedRaw(HalGPIO::BTN_RIGHT, 500)) {
-    const int currentPage = section ? section->currentPage + 1 : 0;
-    const int totalPages = section ? section->pageCount : 0;
-    float bookProgress = 0.0f;
-    if (epub && epub->getBookSize() > 0 && section && section->pageCount > 0) {
-      const float chapterProgress = static_cast<float>(section->currentPage) / static_cast<float>(section->pageCount);
-      bookProgress = epub->calculateProgress(currentSpineIndex, chapterProgress) * 100.0f;
-    }
-    const int bookProgressPercent = clampPercent(static_cast<int>(bookProgress + 0.5f));
-    exitActivity();
-    enterNewActivity(new EpubReaderMenuActivity(
-        this->renderer, this->mappedInput, epub->getTitle(), currentPage, totalPages, bookProgressPercent,
-        SETTINGS.orientation, [this](const uint8_t orientation) { onReaderMenuBack(orientation); },
-        [this](EpubReaderMenuActivity::MenuAction action) { onReaderMenuConfirm(action); }));
+    renderer.storeBwBuffer();
+    inMenu = true;
+    menuSelectedIndex = 0;
+    requestUpdate();
     return;
   }
   const bool frontRightShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_LEFT, 500) || 
@@ -377,6 +412,11 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
 
       break;
     }
+    case EpubReaderMenuActivity::MenuAction::ROTATE_SCREEN: {
+      uint8_t nextOrientation = (SETTINGS.orientation + 1) % 4;
+      applyOrientation(nextOrientation);
+      break;
+    }
     case EpubReaderMenuActivity::MenuAction::GO_TO_PERCENT: {
       // Launch the slider-based percent selector and return here on confirm/cancel.
       float bookProgress = 0.0f;
@@ -471,6 +511,11 @@ void EpubReaderActivity::applyOrientation(const uint8_t orientation) {
 
 // TODO: Failure handling
 void EpubReaderActivity::render(Activity::RenderLock&& lock) {
+  if (inMenu) {
+    renderMenu();
+    return;
+  }
+
   if (!epub) {
     return;
   }
@@ -496,10 +541,10 @@ void EpubReaderActivity::render(Activity::RenderLock&& lock) {
   int orientedMarginTop, orientedMarginRight, orientedMarginBottom, orientedMarginLeft;
   renderer.getOrientedViewableTRBL(&orientedMarginTop, &orientedMarginRight, &orientedMarginBottom,
                                    &orientedMarginLeft);
-  orientedMarginTop += SETTINGS.screenMargin;
-  orientedMarginLeft += SETTINGS.screenMargin;
-  orientedMarginRight += SETTINGS.screenMargin;
-  orientedMarginBottom += SETTINGS.screenMargin;
+  orientedMarginTop += SETTINGS.screenMargin + 30;
+  orientedMarginLeft += SETTINGS.screenMargin + 16;
+  orientedMarginRight += SETTINGS.screenMargin + 16;
+  orientedMarginBottom += SETTINGS.screenMargin + 40;
 
   const auto& metrics = UITheme::getInstance().getMetrics();
 
@@ -602,6 +647,53 @@ void EpubReaderActivity::render(Activity::RenderLock&& lock) {
     ScreenshotUtil::takeScreenshot(renderer);
   }
 }
+void EpubReaderActivity::renderMenu() const {
+  if (!renderer.storeBwBuffer()) {
+    // If we can't store, at least clear the screen to avoid mess
+    renderer.clearScreen();
+  }
+  renderer.restoreBwBuffer();
+  // We MUST store it again immediately because restoreBwBuffer() frees the chunks!
+  // This allows the next frame's renderMenu() (e.g. on selection move) to still have a background.
+  renderer.storeBwBuffer();
+
+  const int sw = renderer.getScreenWidth();
+  const int sh = renderer.getScreenHeight();
+  const int mw = 320;
+  const int mh = 430; // Taller for more options
+  const int mx = (sw - mw) / 2;
+  const int my = (sh - mh) / 2;
+
+  // Border and Background
+  renderer.fillRect(mx - 4, my - 4, mw + 8, mh + 8, true);
+  renderer.fillRect(mx, my, mw, mh, false);
+
+  const char* options[] = {"Resume", "Table of Contents", "Next 10%", "Back 10%", 
+                           "Dark/Day", "Orientation", "Screenshot", "Exit"};
+  
+  for (int i = 0; i < 8; i++) {
+    int ry = my + 15 + (i * 50);
+    if (menuSelectedIndex == i) {
+      renderer.fillRect(mx + 10, ry - 5, mw - 20, 40, true);
+    }
+    
+    renderer.drawText(UI_12_FONT_ID, mx + 20, ry + 2, options[i], (menuSelectedIndex != i));
+  }
+
+  renderer.displayBuffer();
+}
+
+void EpubReaderActivity::jumpPercent(int deltaPercent) {
+  float bookProgress = 0.0f;
+  if (epub && epub->getBookSize() > 0 && section && section->pageCount > 0) {
+    const float chapterProgress = static_cast<float>(section->currentPage) / static_cast<float>(section->pageCount);
+    bookProgress = epub->calculateProgress(currentSpineIndex, chapterProgress) * 100.0f;
+  }
+  
+  int targetPercent = clampPercent(static_cast<int>(bookProgress + 0.5f) + deltaPercent);
+  jumpToPercent(targetPercent);
+}
+
 
 void EpubReaderActivity::saveProgress(int spineIndex, int currentPage, int pageCount) {
   FsFile f;
@@ -627,6 +719,9 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int or
   bool imagePageWithAA = page->hasImages() && SETTINGS.textAntiAliasing;
 
   page->render(renderer, SETTINGS.getReaderFontId(), orientedMarginLeft, orientedMarginTop);
+  if (SETTINGS.darkMode) {
+    renderer.invertScreen();
+  }
   renderStatusBar(orientedMarginRight, orientedMarginBottom, orientedMarginLeft);
   if (imagePageWithAA) {
     // Double FAST_REFRESH with selective image blanking (pablohc's technique):
@@ -687,15 +782,24 @@ void EpubReaderActivity::renderStatusBar(const int orientedMarginRight, const in
     return;
   }
 
-  const auto screenHeight = renderer.getScreenHeight();
-  const auto textY = screenHeight - orientedMarginBottom - 4;
+  const int screenHeight = renderer.getScreenHeight();
+  const int viewportWidth = renderer.getScreenWidth() - orientedMarginLeft - orientedMarginRight;
+  const bool textColor = !SETTINGS.darkMode;
+  const int y = screenHeight - 15;
 
-  char progressStr[32];
-  snprintf(progressStr, sizeof(progressStr), "%d / %d", section->currentPage + 1, section->pageCount);
+  // Track (1px)
+  renderer.fillRect(orientedMarginLeft, y + 2, viewportWidth, 1, textColor);
 
-  int viewportWidth = renderer.getScreenWidth() - orientedMarginLeft - orientedMarginRight;
-  int progressTextWidth = renderer.getTextWidth(SMALL_FONT_ID, progressStr);
-  int xPos = orientedMarginLeft + (viewportWidth - progressTextWidth) / 2;
+  // Progress (3px)
+  if (section->pageCount > 0) {
+    int progressWidth = (static_cast<long>(section->currentPage + 1) * viewportWidth) / section->pageCount;
+    if (progressWidth > viewportWidth) progressWidth = viewportWidth;
+    renderer.fillRect(orientedMarginLeft, y, progressWidth, 3, textColor);
 
-  renderer.drawText(SMALL_FONT_ID, xPos, textY, progressStr);
+    // Draw page number (small text, right aligned within viewport above track)
+    char pageBuf[16];
+    snprintf(pageBuf, sizeof(pageBuf), "%d", section->currentPage + 1);
+    int textWidth = renderer.getTextWidth(SMALL_FONT_ID, pageBuf);
+    renderer.drawText(SMALL_FONT_ID, orientedMarginLeft + viewportWidth - textWidth, y - renderer.getLineHeight(SMALL_FONT_ID), pageBuf, textColor);
+  }
 }
