@@ -8,7 +8,29 @@
 #include "Xtc.h"
 
 #include <HalStorage.h>
+#line 11
 #include <Logging.h>
+
+namespace {
+inline void write16(FsFile& out, const uint16_t value) {
+  out.write(value & 0xFF);
+  out.write((value >> 8) & 0xFF);
+}
+
+inline void write32(FsFile& out, const uint32_t value) {
+  out.write(value & 0xFF);
+  out.write((value >> 8) & 0xFF);
+  out.write((value >> 16) & 0xFF);
+  out.write((value >> 24) & 0xFF);
+}
+
+inline void write32Signed(FsFile& out, const int32_t value) {
+  out.write(value & 0xFF);
+  out.write((value >> 8) & 0xFF);
+  out.write((value >> 16) & 0xFF);
+  out.write((value >> 24) & 0xFF);
+}
+}  // namespace
 
 bool Xtc::load() {
   LOG_DBG("XTC", "Loading XTC: %s", filepath.c_str());
@@ -333,54 +355,93 @@ bool Xtc::generateThumbBmp(int height) const {
   // Get bit depth
   const uint8_t bitDepth = parser->getBitDepth();
 
+  // Allocate buffer for page data
+  size_t bitmapSize;
+  if (bitDepth == 2) {
+    bitmapSize = ((static_cast<size_t>(pageInfo.width) * pageInfo.height + 7) / 8) * 2;
+  } else {
+    bitmapSize = ((pageInfo.width + 7) / 8) * pageInfo.height;
+  }
+  uint8_t* pageBuffer = static_cast<uint8_t*>(malloc(bitmapSize));
+  if (!pageBuffer) {
+    LOG_ERR("XTC", "Failed to allocate page buffer for thumbnail (%lu bytes)", bitmapSize);
+    return false;
+  }
+
+#line 372
+  // Load first page (cover)
+  if (const_cast<xtc::XtcParser*>(parser.get())->loadPage(0, pageBuffer, bitmapSize) == 0) {
+    LOG_ERR("XTC", "Failed to load cover page for thumbnail");
+    free(pageBuffer);
+    return false;
+  }
+
   // Calculate target dimensions for thumbnail (fit within 3x3 grid or Home card)
-  // Use 0.75 (3:4) aspect ratio to fill selection boxes better
-  int THUMB_TARGET_WIDTH = height * 0.75;
-  int THUMB_TARGET_HEIGHT = height;
+  // Standardized 0.75 (3:4) aspect ratio
+  const int THUMB_TARGET_WIDTH = height * 0.75;
+  const int THUMB_TARGET_HEIGHT = height;
 
   // Detect content bounding box to remove white margins
-  uint16_t contentXStart = pageInfo.width;
-  uint16_t contentXEnd = 0;
-  uint16_t contentYStart = pageInfo.height;
-  uint16_t contentYEnd = 0;
-
+  // Use a density threshold to ignore scanner noise at edges
   const size_t bpcSize = (bitDepth == 2) ? ((static_cast<size_t>(pageInfo.width) * pageInfo.height + 7) / 8) : 0;
   const uint8_t* bpcPlane1 = (bitDepth == 2) ? pageBuffer : nullptr;
   const uint8_t* bpcPlane2 = (bitDepth == 2) ? pageBuffer + bpcSize : nullptr;
   const size_t bpcColBytes = (bitDepth == 2) ? ((pageInfo.height + 7) / 8) : 0;
   const size_t bpcSrcRowBytes = (bitDepth == 1) ? ((pageInfo.width + 7) / 8) : 0;
 
+  uint16_t contentXStart = pageInfo.width, contentXEnd = 0;
+  uint16_t contentYStart = pageInfo.height, contentYEnd = 0;
+
+  // Phase 1: Robust content detection (horizontal)
+  for (uint16_t x = 0; x < pageInfo.width; x++) {
+    int blackCount = 0;
+    for (uint16_t y = 0; y < pageInfo.height; y++) {
+      bool isBlack = false;
+      if (bitDepth == 2) {
+        const size_t colIndex = pageInfo.width - 1 - x;
+        const size_t byteOffset = colIndex * bpcColBytes + (y / 8);
+        if (((bpcPlane1[byteOffset] >> (7 - (y % 8))) & 1) || ((bpcPlane2[byteOffset] >> (7 - (y % 8))) & 1))
+          isBlack = true;
+      } else {
+        if (!((pageBuffer[y * bpcSrcRowBytes + x / 8] >> (7 - (x % 8))) & 1)) isBlack = true;
+      }
+      if (isBlack) blackCount++;
+    }
+    // Require at least 0.5% density or 3 pixels to count as content (ignores noise lines)
+    if (blackCount > std::max(2, static_cast<int>(pageInfo.height / 200))) {
+      if (x < contentXStart) contentXStart = x;
+      if (x > contentXEnd) contentXEnd = x;
+    }
+  }
+
+  // Phase 2: Robust content detection (vertical)
   for (uint16_t y = 0; y < pageInfo.height; y++) {
+    int blackCount = 0;
     for (uint16_t x = 0; x < pageInfo.width; x++) {
       bool isBlack = false;
       if (bitDepth == 2) {
         const size_t colIndex = pageInfo.width - 1 - x;
         const size_t byteOffset = colIndex * bpcColBytes + (y / 8);
-        const uint8_t bit1 = (bpcPlane1[byteOffset] >> (7 - (y % 8))) & 1;
-        const uint8_t bit2 = (bpcPlane2[byteOffset] >> (7 - (y % 8))) & 1;
-        if ((bit1 << 1 | bit2) > 0) isBlack = true; // Any non-white
+        if (((bpcPlane1[byteOffset] >> (7 - (y % 8))) & 1) || ((bpcPlane2[byteOffset] >> (7 - (y % 8))) & 1))
+          isBlack = true;
       } else {
         if (!((pageBuffer[y * bpcSrcRowBytes + x / 8] >> (7 - (x % 8))) & 1)) isBlack = true;
       }
-
-      if (isBlack) {
-        if (x < contentXStart) contentXStart = x;
-        if (x > contentXEnd) contentXEnd = x;
-        if (y < contentYStart) contentYStart = y;
-        if (y > contentYEnd) contentYEnd = y;
-      }
+      if (isBlack) blackCount++;
+    }
+    if (blackCount > std::max(2, static_cast<int>(pageInfo.width / 200))) {
+      if (y < contentYStart) contentYStart = y;
+      if (y > contentYEnd) contentYEnd = y;
     }
   }
 
-  // Fallback if page is entirely white
+  // Fallback if page is entirely white or detection failed
   if (contentXStart >= contentXEnd || contentYStart >= contentYEnd) {
-    contentXStart = 0;
-    contentXEnd = pageInfo.width - 1;
-    contentYStart = 0;
-    contentYEnd = pageInfo.height - 1;
+    contentXStart = 0; contentXEnd = pageInfo.width - 1;
+    contentYStart = 0; contentYEnd = pageInfo.height - 1;
   }
   
-  // Add 2px safety margin to the crop
+  // Safety margin (2px)
   contentXStart = (contentXStart > 2) ? contentXStart - 2 : 0;
   contentYStart = (contentYStart > 2) ? contentYStart - 2 : 0;
   contentXEnd = (contentXEnd + 2 < pageInfo.width) ? contentXEnd + 2 : pageInfo.width - 1;
@@ -389,16 +450,20 @@ bool Xtc::generateThumbBmp(int height) const {
   uint16_t contentWidth = contentXEnd - contentXStart + 1;
   uint16_t contentHeight = contentYEnd - contentYStart + 1;
 
-  // Calculate scale factor from content box
+  // Calculate scaling to fit content into target thumb size while preserving aspect ratio
   float scaleX = static_cast<float>(THUMB_TARGET_WIDTH) / contentWidth;
   float scaleY = static_cast<float>(THUMB_TARGET_HEIGHT) / contentHeight;
-  float scale = (scaleX < scaleY) ? scaleX : scaleY; // Fit content within target
+  float scale = std::min(scaleX, scaleY);
 
-  uint16_t thumbWidth = static_cast<uint16_t>(contentWidth * scale);
-  uint16_t thumbHeight = static_cast<uint16_t>(contentHeight * scale);
+  uint16_t scaledWidth = static_cast<uint16_t>(contentWidth * scale);
+  uint16_t scaledHeight = static_cast<uint16_t>(contentHeight * scale);
+  
+  // Center content in fixed 3:4 box
+  int32_t offsetX = (THUMB_TARGET_WIDTH - scaledWidth) / 2;
+  int32_t offsetY = (THUMB_TARGET_HEIGHT - scaledHeight) / 2;
 
-  LOG_DBG("XTC", "Generating thumb BMP (Autocrop): %dx%d @ (%d,%d) -> %dx%d (scale: %.3f)", 
-          contentWidth, contentHeight, contentXStart, contentYStart, thumbWidth, thumbHeight, scale);
+  LOG_DBG("XTC", "Thumb (fixed 3:4): %dx%d -> %dx%d (scaled %dx%d, offset %d,%d)", 
+          contentWidth, contentHeight, THUMB_TARGET_WIDTH, THUMB_TARGET_HEIGHT, scaledWidth, scaledHeight, offsetX, offsetY);
 
   // Create thumbnail BMP file
   FsFile thumbBmp;
@@ -408,32 +473,30 @@ bool Xtc::generateThumbBmp(int height) const {
     return false;
   }
 
-  // Write 1-bit BMP header
-  const uint32_t rowSize = (thumbWidth + 31) / 32 * 4;
-  const uint32_t imageSize = rowSize * thumbHeight;
+  // BMP row sizing (aligned to 4 bytes)
+  const uint32_t rowSize = (THUMB_TARGET_WIDTH + 31) / 32 * 4;
+  const uint32_t imageSize = rowSize * THUMB_TARGET_HEIGHT;
   const uint32_t fileSize = 14 + 40 + 8 + imageSize;
 
-  // File header
-  thumbBmp.write('B');
-  thumbBmp.write('M');
+  // BMP Headers
+  thumbBmp.write('B'); thumbBmp.write('M');
   write32(thumbBmp, fileSize);
-  write32(thumbBmp, 0);
-  write32(thumbBmp, 62);
+  write32(thumbBmp, 0); // reserved
+  write32(thumbBmp, 62); // offset to pixels (14 + 40 + 8)
 
-  // DIB header
-  write32(thumbBmp, 40);
-  write32Signed(thumbBmp, thumbWidth);
-  write32Signed(thumbBmp, -thumbHeight);
-  write16(thumbBmp, 1);
-  write16(thumbBmp, 1);
-  write32(thumbBmp, 0);
+  write32(thumbBmp, 40); // DIB size
+  write32Signed(thumbBmp, THUMB_TARGET_WIDTH);
+  write32Signed(thumbBmp, -THUMB_TARGET_HEIGHT); // top-down
+  write16(thumbBmp, 1); // planes
+  write16(thumbBmp, 1); // bpp
+  write32(thumbBmp, 0); // compression
   write32(thumbBmp, imageSize);
+  write32(thumbBmp, 2835); // 72 DPI
   write32(thumbBmp, 2835);
-  write32(thumbBmp, 2835);
-  write32(thumbBmp, 2);
-  write32(thumbBmp, 2);
+  write32(thumbBmp, 2); // colors used
+  write32(thumbBmp, 2); // important colors
 
-  // Color palette
+  // Palette (Index 0 = Black, Index 1 = White)
   uint8_t palette[8] = {0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x00};
   thumbBmp.write(palette, 8);
 
@@ -444,57 +507,50 @@ bool Xtc::generateThumbBmp(int height) const {
     return false;
   }
 
-  // Fixed-point scale factor (16.16)
   uint32_t scaleInv_fp = static_cast<uint32_t>(65536.0f / scale);
 
-  for (uint16_t dstY = 0; dstY < thumbHeight; dstY++) {
+  for (int32_t dstY = 0; dstY < THUMB_TARGET_HEIGHT; dstY++) {
+    // Fill row with white
     memset(rowBuffer, 0xFF, rowSize);
 
-    uint32_t srcYStart = contentYStart + ((static_cast<uint32_t>(dstY) * scaleInv_fp) >> 16);
-    uint32_t srcYEnd = contentYStart + ((static_cast<uint32_t>(dstY + 1) * scaleInv_fp) >> 16);
-    
-    for (uint16_t dstX = 0; dstX < thumbWidth; dstX++) {
-      uint32_t srcXStart = contentXStart + ((static_cast<uint32_t>(dstX) * scaleInv_fp) >> 16);
-      uint32_t srcXEnd = contentXStart + ((static_cast<uint32_t>(dstX + 1) * scaleInv_fp) >> 16);
+    // Only process content if within scaled area
+    if (dstY >= offsetY && dstY < offsetY + scaledHeight) {
+      uint32_t srcYOffset = dstY - offsetY;
+      uint32_t srcYStart = contentYStart + ((srcYOffset * scaleInv_fp) >> 16);
+      uint32_t srcYEnd = contentYStart + (((srcYOffset + 1) * scaleInv_fp) >> 16);
+      
+      for (int32_t dstX = offsetX; dstX < offsetX + scaledWidth; dstX++) {
+        uint32_t srcXOffset = dstX - offsetX;
+        uint32_t srcXStart = contentXStart + ((srcXOffset * scaleInv_fp) >> 16);
+        uint32_t srcXEnd = contentXStart + (((srcXOffset + 1) * scaleInv_fp) >> 16);
 
-      uint32_t graySum = 0;
-      uint32_t totalCount = 0;
-
-      for (uint32_t srcY = srcYStart; srcY < srcYEnd && srcY < pageInfo.height; srcY++) {
-        for (uint32_t srcX = srcXStart; srcX < srcXEnd && srcX < pageInfo.width; srcX++) {
-          uint8_t grayValue = 255;
-
-          if (bitDepth == 2) {
-            const size_t colIndex = pageInfo.width - 1 - srcX;
-            const size_t byteOffset = colIndex * bpcColBytes + (srcY / 8);
-            const uint8_t bit1 = (bpcPlane1[byteOffset] >> (7 - (srcY % 8))) & 1;
-            const uint8_t bit2 = (bpcPlane2[byteOffset] >> (7 - (srcY % 8))) & 1;
-            grayValue = (3 - (bit1 << 1 | bit2)) * 85;
-          } else {
-            grayValue = ((pageBuffer[srcY * bpcSrcRowBytes + srcX / 8] >> (7 - (srcX % 8))) & 1) ? 255 : 0;
+        uint32_t graySum = 0, totalCount = 0;
+        for (uint32_t srcY = srcYStart; srcY < srcYEnd && srcY < pageInfo.height; srcY++) {
+          for (uint32_t srcX = srcXStart; srcX < srcXEnd && srcX < pageInfo.width; srcX++) {
+            uint8_t grayVal = 255;
+            if (bitDepth == 2) {
+              const size_t colIndex = pageInfo.width - 1 - srcX;
+              const size_t byteOffset = colIndex * bpcColBytes + (srcY / 8);
+              uint8_t b1 = (bpcPlane1[byteOffset] >> (7 - (srcY % 8))) & 1;
+              uint8_t b2 = (bpcPlane2[byteOffset] >> (7 - (srcY % 8))) & 1;
+              grayVal = (3 - (b1 << 1 | b2)) * 85;
+            } else {
+              grayVal = ((pageBuffer[srcY * bpcSrcRowBytes + srcX / 8] >> (7 - (srcX % 8))) & 1) ? 255 : 0;
+            }
+            graySum += grayVal; totalCount++;
           }
+        }
 
-          graySum += grayValue;
-          totalCount++;
+        uint8_t avgGray = (totalCount > 0) ? static_cast<uint8_t>(graySum / totalCount) : 255;
+        static const uint8_t bayer[8][8] = {
+            {0, 32, 8, 40, 2, 34, 10, 42}, {48, 16, 56, 24, 50, 18, 58, 26},
+            {12, 44, 4, 36, 14, 46, 6, 38}, {60, 28, 52, 20, 62, 30, 54, 22},
+            {3, 35, 11, 43, 1, 33, 9, 41},  {51, 19, 59, 27, 49, 17, 57, 25},
+            {15, 47, 7, 39, 13, 45, 5, 37}, {63, 31, 55, 23, 61, 29, 53, 21}};
+        if (avgGray < bayer[dstY % 8][dstX % 8] * 4) {
+          rowBuffer[dstX / 8] &= ~(1 << (7 - (dstX % 8))); // Black
         }
       }
-
-      uint8_t avgGray = (totalCount > 0) ? static_cast<uint8_t>(graySum / totalCount) : 255;
-      
-      // Use Bayer 8x8 for consistent halftone quality
-      static const uint8_t bayer[8][8] = {
-          {0, 32, 8, 40, 2, 34, 10, 42}, {48, 16, 56, 24, 50, 18, 58, 26},
-          {12, 44, 4, 36, 14, 46, 6, 38}, {60, 28, 52, 20, 62, 30, 54, 22},
-          {3, 35, 11, 43, 1, 33, 9, 41},  {51, 19, 59, 27, 49, 17, 57, 25},
-          {15, 47, 7, 39, 13, 45, 5, 37}, {63, 31, 55, 23, 61, 29, 53, 21}};
-      
-      uint8_t bayerVal = bayer[dstY % 8][dstX % 8] * 4;
-      uint8_t oneBit = (avgGray >= bayerVal) ? 1 : 0;
-
-      const size_t byteIndex = dstX / 8;
-      const size_t bitOffset = 7 - (dstX % 8);
-      if (oneBit) rowBuffer[byteIndex] |= (1 << bitOffset);
-      else rowBuffer[byteIndex] &= ~(1 << bitOffset);
     }
     thumbBmp.write(rowBuffer, rowSize);
   }
@@ -503,7 +559,7 @@ bool Xtc::generateThumbBmp(int height) const {
   thumbBmp.close();
   free(pageBuffer);
 
-  LOG_DBG("XTC", "Generated thumb BMP (%dx%d): %s", thumbWidth, thumbHeight, getThumbBmpPath(height).c_str());
+  LOG_DBG("XTC", "Generated thumb BMP: %s", getThumbBmpPath(height).c_str());
   return true;
 }
 

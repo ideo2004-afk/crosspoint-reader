@@ -265,17 +265,25 @@ bool JpegToBmpConverter::jpegFileToBmpStreamInternal(FsFile& jpegFile, Print& bm
             targetWidth, targetHeight);
   }
 
-  // Write BMP header with output dimensions
+  // Use fixed target dimensions for thumbnails/covers to ensure UI alignment
+  const int finalWidth = (targetWidth > 0) ? targetWidth : outWidth;
+  const int finalHeight = (targetHeight > 0) ? targetHeight : outHeight;
+
+  // Calculate centering offsets
+  const int offsetX = (finalWidth - outWidth) / 2;
+  const int offsetY = (finalHeight - outHeight) / 2;
+
+  // Write BMP header with final dimensions
   int bytesPerRow;
   if (USE_8BIT_OUTPUT && !oneBit) {
-    writeBmpHeader8bit(bmpOut, outWidth, outHeight);
-    bytesPerRow = (outWidth + 3) / 4 * 4;
+    writeBmpHeader8bit(bmpOut, finalWidth, finalHeight);
+    bytesPerRow = (finalWidth + 3) / 4 * 4;
   } else if (oneBit) {
-    writeBmpHeader1bit(bmpOut, outWidth, outHeight);
-    bytesPerRow = (outWidth + 31) / 32 * 4;  // 1 bit per pixel
+    writeBmpHeader1bit(bmpOut, finalWidth, finalHeight);
+    bytesPerRow = (finalWidth + 31) / 32 * 4;  // 1 bit per pixel
   } else {
-    writeBmpHeader2bit(bmpOut, outWidth, outHeight);
-    bytesPerRow = (outWidth * 2 + 31) / 32 * 4;
+    writeBmpHeader2bit(bmpOut, finalWidth, finalHeight);
+    bytesPerRow = (finalWidth * 2 + 31) / 32 * 4;
   }
 
   // Allocate row buffer
@@ -286,11 +294,9 @@ bool JpegToBmpConverter::jpegFileToBmpStreamInternal(FsFile& jpegFile, Print& bm
   }
 
   // Allocate a buffer for one MCU row worth of grayscale pixels
-  // This is the minimal memory needed for streaming conversion
   const int mcuPixelHeight = imageInfo.m_MCUHeight;
   const int mcuRowPixels = imageInfo.m_width * mcuPixelHeight;
 
-  // Validate MCU row buffer size before allocation
   if (mcuRowPixels > MAX_MCU_ROW_BYTES) {
     LOG_DBG("JPG", "MCU row buffer too large (%d bytes), max: %d", mcuRowPixels, MAX_MCU_ROW_BYTES);
     free(rowBuffer);
@@ -473,30 +479,46 @@ bool JpegToBmpConverter::jpegFileToBmpStreamInternal(FsFile& jpegFile, Print& bm
 
         // Output all rows whose boundaries we've crossed (handles both up and downscaling)
         // For upscaling, one source row may produce multiple output rows
-        while (srcY_fp >= nextOutY_srcStart && currentOutY < outHeight) {
+        while (srcY_fp >= nextOutY_srcStart && currentOutY < (uint32_t)outHeight) {
+          // --- EMIT ROW ---
+          // 1. Handle Top Padding (only on the very first content row emission)
+          while (currentOutY == 0 && (int)currentOutY < offsetY) {
+            memset(rowBuffer, 0xFF, bytesPerRow); // White
+            bmpOut.write(rowBuffer, bytesPerRow);
+            offsetY > 0 ? (const_cast<int&>(offsetY))-- : 0; // State hack: drain offsetY
+            if (offsetY == 0) break;
+          }
+
           memset(rowBuffer, 0, bytesPerRow);
+          if (oneBit) memset(rowBuffer, 0xFF, bytesPerRow); // Default white for 1-bit
 
           if (USE_8BIT_OUTPUT && !oneBit) {
             for (int x = 0; x < outWidth; x++) {
-              const uint8_t gray = (rowCount[x] > 0) ? (rowAccum[x] / rowCount[x]) : 0;
-              rowBuffer[x] = adjustPixel(gray);
+              const uint8_t gray = (rowCount[x] > 0) ? (rowAccum[x] / rowCount[x]) : 255;
+              int finalX = x + offsetX;
+              if (finalX < 0 || finalX >= finalWidth) continue;
+              rowBuffer[finalX] = adjustPixel(gray);
             }
           } else if (oneBit) {
             // 1-bit output with Atkinson dithering for better quality
             for (int x = 0; x < outWidth; x++) {
-              const uint8_t gray = (rowCount[x] > 0) ? (rowAccum[x] / rowCount[x]) : 0;
+              const uint8_t gray = (rowCount[x] > 0) ? (rowAccum[x] / rowCount[x]) : 255;
+              int finalX = x + offsetX;
+              if (finalX < 0 || finalX >= finalWidth) continue;
+
               const uint8_t bit = atkinson1BitDitherer ? atkinson1BitDitherer->processPixel(gray, x)
                                                        : quantize1bit(gray, x, currentOutY);
               // Pack 1-bit value: MSB first, 8 pixels per byte
-              const int byteIndex = x / 8;
-              const int bitOffset = 7 - (x % 8);
-              rowBuffer[byteIndex] |= (bit << bitOffset);
+              if (bit == 0) rowBuffer[finalX / 8] &= ~(1 << (7 - (finalX % 8)));
             }
             if (atkinson1BitDitherer) atkinson1BitDitherer->nextRow();
           } else {
             // 2-bit output
             for (int x = 0; x < outWidth; x++) {
-              const uint8_t gray = adjustPixel((rowCount[x] > 0) ? (rowAccum[x] / rowCount[x]) : 0);
+              const uint8_t gray = adjustPixel((rowCount[x] > 0) ? (rowAccum[x] / rowCount[x]) : 255);
+              int finalX = x + offsetX;
+              if (finalX < 0 || finalX >= finalWidth) continue;
+
               uint8_t twoBit;
               if (atkinsonDitherer) {
                 twoBit = atkinsonDitherer->processPixel(gray, x);
@@ -505,8 +527,8 @@ bool JpegToBmpConverter::jpegFileToBmpStreamInternal(FsFile& jpegFile, Print& bm
               } else {
                 twoBit = quantize(gray, x, currentOutY);
               }
-              const int byteIndex = (x * 2) / 8;
-              const int bitOffset = 6 - ((x * 2) % 8);
+              const int byteIndex = (finalX * 2) / 8;
+              const int bitOffset = 6 - ((finalX * 2) % 8);
               rowBuffer[byteIndex] |= (twoBit << bitOffset);
             }
             if (atkinsonDitherer)
@@ -535,12 +557,19 @@ bool JpegToBmpConverter::jpegFileToBmpStreamInternal(FsFile& jpegFile, Print& bm
     }
   }
 
+  // Handle bottom padding
+  while ((int)currentOutY < finalHeight) {
+    memset(rowBuffer, 0xFF, bytesPerRow);
+    bmpOut.write(rowBuffer, bytesPerRow);
+    currentOutY++;
+  }
+
   // Clean up
   if (rowAccum) {
-    delete[] rowAccum;
+    free(rowAccum);
   }
   if (rowCount) {
-    delete[] rowCount;
+    free(rowCount);
   }
   if (atkinsonDitherer) {
     delete atkinsonDitherer;
@@ -554,7 +583,7 @@ bool JpegToBmpConverter::jpegFileToBmpStreamInternal(FsFile& jpegFile, Print& bm
   free(mcuRowBuffer);
   free(rowBuffer);
 
-  LOG_DBG("JPG", "Successfully converted JPEG to BMP");
+  LOG_DBG("JPG", "Successfully converted JPEG to BMP (%dx%d)", finalWidth, finalHeight);
   return true;
 }
 

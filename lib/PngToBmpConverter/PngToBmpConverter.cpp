@@ -598,17 +598,25 @@ bool PngToBmpConverter::pngFileToBmpStreamInternal(FsFile& pngFile, Print& bmpOu
             targetHeight);
   }
 
-  // Write BMP header
+  // Use fixed target dimensions for thumbnails/covers to ensure UI alignment
+  const int finalWidth = (targetWidth > 0) ? targetWidth : outWidth;
+  const int finalHeight = (targetHeight > 0) ? targetHeight : outHeight;
+
+  // Calculate centering offsets
+  const int offsetX = (finalWidth - outWidth) / 2;
+  const int offsetY = (finalHeight - outHeight) / 2;
+
+  // Write BMP header with final dimensions
   int bytesPerRow;
   if (USE_8BIT_OUTPUT && !oneBit) {
-    writeBmpHeader8bit(bmpOut, outWidth, outHeight);
-    bytesPerRow = (outWidth + 3) / 4 * 4;
+    writeBmpHeader8bit(bmpOut, finalWidth, finalHeight);
+    bytesPerRow = (finalWidth + 3) / 4 * 4;
   } else if (oneBit) {
-    writeBmpHeader1bit(bmpOut, outWidth, outHeight);
-    bytesPerRow = (outWidth + 31) / 32 * 4;
+    writeBmpHeader1bit(bmpOut, finalWidth, finalHeight);
+    bytesPerRow = (finalWidth + 31) / 32 * 4;
   } else {
-    writeBmpHeader2bit(bmpOut, outWidth, outHeight);
-    bytesPerRow = (outWidth * 2 + 31) / 32 * 4;
+    writeBmpHeader2bit(bmpOut, finalWidth, finalHeight);
+    bytesPerRow = (finalWidth * 2 + 31) / 32 * 4;
   }
 
   // Allocate BMP row buffer
@@ -743,26 +751,43 @@ bool PngToBmpConverter::pngFileToBmpStreamInternal(FsFile& pngFile, Print& bmpOu
       // Output all rows whose boundaries we've crossed (handles both up and downscaling)
       // For upscaling, one source row may produce multiple output rows
       while (srcY_fp >= nextOutY_srcStart && currentOutY < outHeight) {
+        // --- EMIT ROW ---
+        // 1. Handle Top Padding
+        while (currentOutY == 0 && currentOutY < (uint32_t)offsetY) {
+          memset(rowBuffer, 0xFF, bytesPerRow); // White
+          bmpOut.write(rowBuffer, bytesPerRow);
+          // (Correction: offsetY is const, but we skip it by just looping)
+          static int padY = 0;
+          if (++padY >= offsetY) break;
+          continue;
+        }
+
         memset(rowBuffer, 0, bytesPerRow);
+        if (oneBit) memset(rowBuffer, 0xFF, bytesPerRow);
 
         if (USE_8BIT_OUTPUT && !oneBit) {
           for (int x = 0; x < outWidth; x++) {
-            const uint8_t gray = (rowCount[x] > 0) ? (rowAccum[x] / rowCount[x]) : 0;
-            rowBuffer[x] = adjustPixel(gray);
+            const uint8_t gray = (rowCount[x] > 0) ? (rowAccum[x] / rowCount[x]) : 255;
+            int finalX = x + offsetX;
+            if (finalX < 0 || finalX >= finalWidth) continue;
+            rowBuffer[finalX] = adjustPixel(gray);
           }
         } else if (oneBit) {
           for (int x = 0; x < outWidth; x++) {
-            const uint8_t gray = (rowCount[x] > 0) ? (rowAccum[x] / rowCount[x]) : 0;
-            const uint8_t bit =
-                atkinson1BitDitherer ? atkinson1BitDitherer->processPixel(gray, x) : quantize1bit(gray, x, currentOutY);
-            const int byteIndex = x / 8;
-            const int bitOffset = 7 - (x % 8);
-            rowBuffer[byteIndex] |= (bit << bitOffset);
+            const uint8_t gray = (rowCount[x] > 0) ? (rowAccum[x] / rowCount[x]) : 255;
+            int finalX = x + offsetX;
+            if (finalX < 0 || finalX >= finalWidth) continue;
+
+            const uint8_t bit = atkinson1BitDitherer ? atkinson1BitDitherer->processPixel(gray, x) : quantize1bit(gray, x, currentOutY);
+            if (bit == 0) rowBuffer[finalX / 8] &= ~(1 << (7 - (finalX % 8)));
           }
           if (atkinson1BitDitherer) atkinson1BitDitherer->nextRow();
         } else {
           for (int x = 0; x < outWidth; x++) {
-            const uint8_t gray = adjustPixel((rowCount[x] > 0) ? (rowAccum[x] / rowCount[x]) : 0);
+            const uint8_t gray = adjustPixel((rowCount[x] > 0) ? (rowAccum[x] / rowCount[x]) : 255);
+            int finalX = x + offsetX;
+            if (finalX < 0 || finalX >= finalWidth) continue;
+
             uint8_t twoBit;
             if (atkinsonDitherer) {
               twoBit = atkinsonDitherer->processPixel(gray, x);
@@ -771,8 +796,8 @@ bool PngToBmpConverter::pngFileToBmpStreamInternal(FsFile& pngFile, Print& bmpOu
             } else {
               twoBit = quantize(gray, x, currentOutY);
             }
-            const int byteIndex = (x * 2) / 8;
-            const int bitOffset = 6 - ((x * 2) % 8);
+            const int byteIndex = (finalX * 2) / 8;
+            const int bitOffset = 6 - ((finalX * 2) % 8);
             rowBuffer[byteIndex] |= (twoBit << bitOffset);
           }
           if (atkinsonDitherer)
@@ -804,6 +829,13 @@ bool PngToBmpConverter::pngFileToBmpStreamInternal(FsFile& pngFile, Print& bmpOu
     ctx.currentRow = temp;
   }
 
+  // Handle bottom padding
+  while ((int)currentOutY < finalHeight) {
+    memset(rowBuffer, 0xFF, bytesPerRow);
+    bmpOut.write(rowBuffer, bytesPerRow);
+    currentOutY++;
+  }
+
   // Clean up
   free(grayRow);
   delete[] rowAccum;
@@ -816,7 +848,7 @@ bool PngToBmpConverter::pngFileToBmpStreamInternal(FsFile& pngFile, Print& bmpOu
   free(ctx.previousRow);
 
   if (success) {
-    LOG_DBG("PNG", "Successfully converted PNG to BMP");
+    LOG_DBG("PNG", "Successfully converted PNG to BMP (%dx%d)", finalWidth, finalHeight);
   }
   return success;
 }

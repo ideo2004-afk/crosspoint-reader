@@ -53,9 +53,20 @@ void Lyra3CoversTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, con
               float ratio = coverWidth / coverHeight;
               const float tileRatio = static_cast<float>(tileWidth - 2 * hPaddingInSelection) /
                                       static_cast<float>(Lyra3CoversMetrics::values.homeCoverHeight);
-              float cropX = 1.0f - (tileRatio / ratio);
+              
+              int drawX = tileX + hPaddingInSelection;
+              float cropX = 0.0f;
 
-              renderer.drawBitmap(bitmap, tileX + hPaddingInSelection, tileY + hPaddingInSelection,
+              if (ratio > tileRatio) {
+                // Bitmap is wider than tile: crop sides
+                cropX = 1.0f - (tileRatio / ratio);
+              } else {
+                // Bitmap is narrower: center horizontally
+                const int actualWidth = static_cast<int>(Lyra3CoversMetrics::values.homeCoverHeight * ratio);
+                drawX = tileX + (tileWidth - actualWidth) / 2;
+              }
+
+              renderer.drawBitmap(bitmap, drawX, tileY + hPaddingInSelection,
                                   tileWidth - 2 * hPaddingInSelection, Lyra3CoversMetrics::values.homeCoverHeight,
                                   cropX);
             } else {

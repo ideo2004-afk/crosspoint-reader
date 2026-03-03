@@ -640,8 +640,11 @@ void GfxRenderer::drawBitmap(const Bitmap& bitmap, const int x, const int y, con
 
   float scale = 1.0f;
   bool isScaled = false;
-  int cropPixX = std::floor(bitmap.getWidth() * cropX / 2.0f);
-  int cropPixY = std::floor(bitmap.getHeight() * cropY / 2.0f);
+  int cropPixX = std::max(0, (int)std::floor(bitmap.getWidth() * cropX / 2.0f));
+  int cropPixY = std::max(0, (int)std::floor(bitmap.getHeight() * cropY / 2.0f));
+  if (cropX < 0 || cropY < 0) {
+    LOG_DBG("GFX", "Negative crop requested (%f, %f), clamping to 0", cropX, cropY);
+  }
   LOG_DBG("GFX", "Cropping %dx%d by %dx%d pix, is %s", bitmap.getWidth(), bitmap.getHeight(), cropPixX, cropPixY,
           bitmap.isTopDown() ? "top-down" : "bottom-up");
 
