@@ -29,11 +29,26 @@ class EpubReaderActivity final : public ActivityWithSubactivity {
   bool inMenu = false;
   int menuSelectedIndex = 0;
 
+  struct Bookmark {
+    uint16_t spineIndex;
+    uint16_t pageIndex;
+    bool operator==(const Bookmark& other) const {
+      return spineIndex == other.spineIndex && pageIndex == other.pageIndex;
+    }
+  };
+  std::vector<Bookmark> bookmarks;
+
   void renderContents(std::unique_ptr<Page> page, int orientedMarginTop, int orientedMarginRight,
                       int orientedMarginBottom, int orientedMarginLeft);
   void renderStatusBar(int orientedMarginRight, int orientedMarginBottom, int orientedMarginLeft) const;
+  void renderBookmarkIndicator() const;
   void renderMenu() const;
   void saveProgress(int spineIndex, int currentPage, int pageCount);
+  void saveBookmarks() const;
+  void loadBookmarks();
+  void toggleBookmark();
+  void nextBookmark();
+  bool isPageBookmarked(int spine, int page) const;
   // Jump to a percentage of the book (0-100), mapping it to spine and page.
   void jumpToPercent(int percent);
   void jumpPercent(int deltaPercent);

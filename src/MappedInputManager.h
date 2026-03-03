@@ -31,12 +31,15 @@ class MappedInputManager {
 
   // Raw physical GPIO access (bypasses remapping) for activities with fixed layouts.
   bool wasReleasedRaw(uint8_t buttonIndex) const;
+  bool wasPressedRaw(uint8_t buttonIndex) const;
   bool isPressedRaw(uint8_t buttonIndex) const;
   bool wasReleasedAnyOf(uint8_t a, uint8_t b) const;
   bool isPressedAnyOf(uint8_t a, uint8_t b) const;
 
   bool wasLongPressedRaw(uint8_t buttonIndex, unsigned long threshold = 500);
   bool wasShortPressedRaw(uint8_t buttonIndex, unsigned long threshold = 500) const;
+  void ignoreNextReleaseRaw(uint8_t buttonIndex);
+  void consumeButtonRaw(uint8_t buttonIndex);
 
  private:
   HalGPIO& gpio;

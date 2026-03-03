@@ -17,6 +17,7 @@
 #include "fontIds.h"
 #include "ReadingStatsStore.h"
 #include "util/ScreenshotUtil.h"
+#include <algorithm>
 
 namespace {
 // pagesPerRefresh now comes from SETTINGS.getRefreshFrequency()
@@ -105,6 +106,7 @@ void EpubReaderActivity::onEnter() {
   sessionStartMillis = millis();
 
   // Trigger first update
+  loadBookmarks();
   requestUpdate();
 }
 
@@ -252,6 +254,42 @@ void EpubReaderActivity::loop() {
   // Side DOWN: short = prev page, long = -10 pages
   const bool sideDownShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_DOWN, 500);
   const bool sideDownLong  = mappedInput.wasLongPressedRaw(HalGPIO::BTN_DOWN, 500);
+
+  // Combination keys for bookmarks and navigation:
+  // LB (LEFT Cluster: Back/Confirm) + Side DOWN (RD) = Toggle Bookmark
+  // LB (LEFT Cluster: Back/Confirm) + Side UP (RU)   = Next Bookmark
+  // RB (RIGHT Cluster: Left/Right)  + Side UP/DOWN   = Jump +/- 10%
+  const bool lbPressed = mappedInput.isPressedRaw(HalGPIO::BTN_BACK) || mappedInput.isPressedRaw(HalGPIO::BTN_CONFIRM);
+  const bool rbPressed = mappedInput.isPressedRaw(HalGPIO::BTN_LEFT) || mappedInput.isPressedRaw(HalGPIO::BTN_RIGHT);
+
+  if (lbPressed && mappedInput.wasPressedRaw(HalGPIO::BTN_DOWN)) {
+    toggleBookmark();
+    if (mappedInput.isPressedRaw(HalGPIO::BTN_BACK)) mappedInput.consumeButtonRaw(HalGPIO::BTN_BACK);
+    if (mappedInput.isPressedRaw(HalGPIO::BTN_CONFIRM)) mappedInput.consumeButtonRaw(HalGPIO::BTN_CONFIRM);
+    mappedInput.consumeButtonRaw(HalGPIO::BTN_DOWN);
+    return;
+  }
+  if (lbPressed && mappedInput.wasPressedRaw(HalGPIO::BTN_UP)) {
+    nextBookmark();
+    if (mappedInput.isPressedRaw(HalGPIO::BTN_BACK)) mappedInput.consumeButtonRaw(HalGPIO::BTN_BACK);
+    if (mappedInput.isPressedRaw(HalGPIO::BTN_CONFIRM)) mappedInput.consumeButtonRaw(HalGPIO::BTN_CONFIRM);
+    mappedInput.consumeButtonRaw(HalGPIO::BTN_UP);
+    return;
+  }
+  if (rbPressed && mappedInput.wasPressedRaw(HalGPIO::BTN_UP)) {
+    jumpPercent(10);
+    if (mappedInput.isPressedRaw(HalGPIO::BTN_LEFT)) mappedInput.consumeButtonRaw(HalGPIO::BTN_LEFT);
+    if (mappedInput.isPressedRaw(HalGPIO::BTN_RIGHT)) mappedInput.consumeButtonRaw(HalGPIO::BTN_RIGHT);
+    mappedInput.consumeButtonRaw(HalGPIO::BTN_UP);
+    return;
+  }
+  if (rbPressed && mappedInput.wasPressedRaw(HalGPIO::BTN_DOWN)) {
+    jumpPercent(-10);
+    if (mappedInput.isPressedRaw(HalGPIO::BTN_LEFT)) mappedInput.consumeButtonRaw(HalGPIO::BTN_LEFT);
+    if (mappedInput.isPressedRaw(HalGPIO::BTN_RIGHT)) mappedInput.consumeButtonRaw(HalGPIO::BTN_RIGHT);
+    mappedInput.consumeButtonRaw(HalGPIO::BTN_DOWN);
+    return;
+  }
 
   if (!frontLeftShort && !frontRightShort && !sideUpShort && !sideUpLong && !sideDownShort && !sideDownLong) {
     return;
@@ -736,16 +774,19 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int or
 
       // Re-render page content to restore images into the blanked area
       page->render(renderer, SETTINGS.getReaderFontId(), orientedMarginLeft, orientedMarginTop);
+      renderBookmarkIndicator();
       renderStatusBar(orientedMarginRight, orientedMarginBottom, orientedMarginLeft);
       renderer.displayBuffer(HalDisplay::FAST_REFRESH);
     } else {
+      renderBookmarkIndicator();
       renderer.displayBuffer(HalDisplay::HALF_REFRESH);
     }
-    // Double FAST_REFRESH handles ghosting for image pages; don't count toward full refresh cadence
   } else if (pagesUntilFullRefresh <= 1) {
+    renderBookmarkIndicator();
     renderer.displayBuffer(HalDisplay::HALF_REFRESH);
     pagesUntilFullRefresh = SETTINGS.getRefreshFrequency();
   } else {
+    renderBookmarkIndicator();
     renderer.displayBuffer();
     pagesUntilFullRefresh--;
   }
@@ -803,4 +844,97 @@ void EpubReaderActivity::renderStatusBar(const int orientedMarginRight, const in
     renderer.drawText(SMALL_FONT_ID, orientedMarginLeft + viewportWidth - textWidth, y - renderer.getLineHeight(SMALL_FONT_ID), pageBuf, 
                       SETTINGS.darkMode ? Color::LightGray : Color::DarkGray);
   }
+}
+
+void EpubReaderActivity::renderBookmarkIndicator() const {
+  if (section && isPageBookmarked(currentSpineIndex, section->currentPage)) {
+    const int sw = renderer.getScreenWidth();
+    const int rw = 20;
+    const int rh = 40;
+    const int rx = sw - rw - 30;
+    const int ry = 0;
+    
+    // Draw ribbon (inverted when in dark mode to stay visible)
+    renderer.fillRect(rx, ry, rw, rh, !SETTINGS.darkMode);
+  }
+}
+
+void EpubReaderActivity::saveBookmarks() const {
+  FsFile f;
+  if (Storage.openFileForWrite("ERS", epub->getCachePath() + "/bookmarks.bin", f)) {
+    for (const auto& b : bookmarks) {
+      uint8_t data[4];
+      data[0] = b.spineIndex & 0xFF;
+      data[1] = (b.spineIndex >> 8) & 0xFF;
+      data[2] = b.pageIndex & 0xFF;
+      data[3] = (b.pageIndex >> 8) & 0xFF;
+      f.write(data, 4);
+    }
+    f.close();
+  }
+}
+
+void EpubReaderActivity::loadBookmarks() {
+  bookmarks.clear();
+  FsFile f;
+  if (Storage.openFileForRead("ERS", epub->getCachePath() + "/bookmarks.bin", f)) {
+    uint8_t data[4];
+    while (f.read(data, 4) == 4) {
+      uint16_t spine = data[0] | (data[1] << 8);
+      uint16_t page = data[2] | (data[3] << 8);
+      bookmarks.push_back({spine, page});
+    }
+    f.close();
+    std::sort(bookmarks.begin(), bookmarks.end(), [](const Bookmark& a, const Bookmark& b) {
+      if (a.spineIndex != b.spineIndex) return a.spineIndex < b.spineIndex;
+      return a.pageIndex < b.pageIndex;
+    });
+  }
+}
+
+void EpubReaderActivity::toggleBookmark() {
+  if (!section) return;
+  Bookmark current = { (uint16_t)currentSpineIndex, (uint16_t)section->currentPage };
+  auto it = std::find(bookmarks.begin(), bookmarks.end(), current);
+  if (it != bookmarks.end()) {
+    bookmarks.erase(it);
+  } else {
+    bookmarks.push_back(current);
+    std::sort(bookmarks.begin(), bookmarks.end(), [](const Bookmark& a, const Bookmark& b) {
+      if (a.spineIndex != b.spineIndex) return a.spineIndex < b.spineIndex;
+      return a.pageIndex < b.pageIndex;
+    });
+  }
+  saveBookmarks();
+  requestUpdate();
+}
+
+void EpubReaderActivity::nextBookmark() {
+  if (bookmarks.empty() || !section) return;
+
+  Bookmark current = { (uint16_t)currentSpineIndex, (uint16_t)section->currentPage };
+  auto it = std::upper_bound(bookmarks.begin(), bookmarks.end(), current, [](const Bookmark& a, const Bookmark& b) {
+    if (a.spineIndex != b.spineIndex) return a.spineIndex < b.spineIndex;
+    return a.pageIndex < b.pageIndex;
+  });
+
+  Bookmark target;
+  if (it == bookmarks.end()) {
+    target = bookmarks[0];
+  } else {
+    target = *it;
+  }
+
+  if (currentSpineIndex != target.spineIndex || section->currentPage != target.pageIndex) {
+    RenderLock lock(*this);
+    currentSpineIndex = target.spineIndex;
+    nextPageNumber = target.pageIndex;
+    section.reset();
+    requestUpdate();
+  }
+}
+
+bool EpubReaderActivity::isPageBookmarked(int spine, int page) const {
+  Bookmark target = { (uint16_t)spine, (uint16_t)page };
+  return std::find(bookmarks.begin(), bookmarks.end(), target) != bookmarks.end();
 }

@@ -153,6 +153,8 @@ bool MappedInputManager::wasReleasedRaw(uint8_t buttonIndex) const {
   return false;
 }
 
+bool MappedInputManager::wasPressedRaw(uint8_t buttonIndex) const { return gpio.wasPressed(buttonIndex); }
+
 bool MappedInputManager::isPressedRaw(uint8_t buttonIndex) const { return gpio.isPressed(buttonIndex); }
 
 bool MappedInputManager::wasReleasedAnyOf(uint8_t a, uint8_t b) const {
@@ -178,4 +180,17 @@ bool MappedInputManager::wasLongPressedRaw(uint8_t buttonIndex, unsigned long th
 
 bool MappedInputManager::wasShortPressedRaw(uint8_t buttonIndex, unsigned long threshold) const {
   return wasReleasedRaw(buttonIndex) && gpio.getHeldTime() < threshold;
+}
+
+void MappedInputManager::ignoreNextReleaseRaw(uint8_t buttonIndex) {
+  if (buttonIndex < 16) {
+    ignoreNextReleaseRawMask |= (1 << buttonIndex);
+  }
+}
+
+void MappedInputManager::consumeButtonRaw(uint8_t buttonIndex) {
+  if (buttonIndex < 16) {
+    ignoreNextReleaseRawMask |= (1 << buttonIndex);
+    firedLongPressRawMask |= (1 << buttonIndex);
+  }
 }

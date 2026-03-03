@@ -11,6 +11,7 @@
 #include <GfxRenderer.h>
 #include <HalStorage.h>
 #include <I18n.h>
+#include <algorithm>
 
 #include "ReadingStatsStore.h"
 #include "RecentBooksStore.h"
@@ -18,6 +19,7 @@
 #include "CrossPointState.h"
 #include "MappedInputManager.h"
 #include "fontIds.h"
+#include "util/ScreenshotUtil.h"
 
 namespace {
 constexpr unsigned long skipPageMs = 700;
@@ -35,6 +37,7 @@ void XtcReaderActivity::onEnter() {
 
   // Load saved progress
   loadProgress();
+  loadBookmarks();
 
   // Save current XTC as last opened book and add to recent books
   APP_STATE.openEpubPath = xtc->getPath();
@@ -75,10 +78,10 @@ void XtcReaderActivity::loop() {
   // === Menu Input Handling ===
   if (inMenu) {
     if (mappedInput.wasReleasedRaw(HalGPIO::BTN_UP)) {
-      menuSelectedIndex = (menuSelectedIndex > 0) ? menuSelectedIndex - 1 : 4;
+      menuSelectedIndex = (menuSelectedIndex > 0) ? menuSelectedIndex - 1 : 5;
       requestUpdate();
     } else if (mappedInput.wasReleasedRaw(HalGPIO::BTN_DOWN)) {
-      menuSelectedIndex = (menuSelectedIndex < 4) ? menuSelectedIndex + 1 : 0;
+      menuSelectedIndex = (menuSelectedIndex < 5) ? menuSelectedIndex + 1 : 0;
       requestUpdate();
     } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Confirm)) {
       // Execute Menu Action (Right Cluster)
@@ -93,7 +96,10 @@ void XtcReaderActivity::loop() {
         SETTINGS.darkMode = !SETTINGS.darkMode;
         SETTINGS.saveToFile();
         requestUpdate();
-      } else if (menuSelectedIndex == 4) { // Exit
+      } else if (menuSelectedIndex == 4) { // Screenshot
+        pendingScreenshot = true;
+        requestUpdate();
+      } else if (menuSelectedIndex == 5) { // Exit
         onGoHome();
       }
       return;
@@ -143,6 +149,42 @@ void XtcReaderActivity::loop() {
   const bool sideDownShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_DOWN, 500);
   const bool sideDownLong  = mappedInput.wasLongPressedRaw(HalGPIO::BTN_DOWN, 500);
 
+  // Combination keys for bookmarks:
+  // LB (LEFT Cluster: Back/Confirm) + Side DOWN (RD) = Toggle Bookmark
+  // LB (LEFT Cluster: Back/Confirm) + Side UP (RU)   = Next Bookmark
+  // RB (RIGHT Cluster: Left/Right)  + Side UP/DOWN   = Jump +/- 10%
+  const bool lbPressed = mappedInput.isPressedRaw(HalGPIO::BTN_BACK) || mappedInput.isPressedRaw(HalGPIO::BTN_CONFIRM);
+  const bool rbPressed = mappedInput.isPressedRaw(HalGPIO::BTN_LEFT) || mappedInput.isPressedRaw(HalGPIO::BTN_RIGHT);
+
+  if (lbPressed && mappedInput.wasPressedRaw(HalGPIO::BTN_DOWN)) {
+    toggleBookmark();
+    if (mappedInput.isPressedRaw(HalGPIO::BTN_BACK)) mappedInput.consumeButtonRaw(HalGPIO::BTN_BACK);
+    if (mappedInput.isPressedRaw(HalGPIO::BTN_CONFIRM)) mappedInput.consumeButtonRaw(HalGPIO::BTN_CONFIRM);
+    mappedInput.consumeButtonRaw(HalGPIO::BTN_DOWN);
+    return;
+  }
+  if (lbPressed && mappedInput.wasPressedRaw(HalGPIO::BTN_UP)) {
+    nextBookmark();
+    if (mappedInput.isPressedRaw(HalGPIO::BTN_BACK)) mappedInput.consumeButtonRaw(HalGPIO::BTN_BACK);
+    if (mappedInput.isPressedRaw(HalGPIO::BTN_CONFIRM)) mappedInput.consumeButtonRaw(HalGPIO::BTN_CONFIRM);
+    mappedInput.consumeButtonRaw(HalGPIO::BTN_UP);
+    return;
+  }
+  if (rbPressed && mappedInput.wasPressedRaw(HalGPIO::BTN_UP)) {
+    jumpPercent(10);
+    if (mappedInput.isPressedRaw(HalGPIO::BTN_LEFT)) mappedInput.consumeButtonRaw(HalGPIO::BTN_LEFT);
+    if (mappedInput.isPressedRaw(HalGPIO::BTN_RIGHT)) mappedInput.consumeButtonRaw(HalGPIO::BTN_RIGHT);
+    mappedInput.consumeButtonRaw(HalGPIO::BTN_UP);
+    return;
+  }
+  if (rbPressed && mappedInput.wasPressedRaw(HalGPIO::BTN_DOWN)) {
+    jumpPercent(-10);
+    if (mappedInput.isPressedRaw(HalGPIO::BTN_LEFT)) mappedInput.consumeButtonRaw(HalGPIO::BTN_LEFT);
+    if (mappedInput.isPressedRaw(HalGPIO::BTN_RIGHT)) mappedInput.consumeButtonRaw(HalGPIO::BTN_RIGHT);
+    mappedInput.consumeButtonRaw(HalGPIO::BTN_DOWN);
+    return;
+  }
+
   int skipAmount = 0;
   if (sideUpLong)          skipAmount = 10;
   else if (sideDownLong)   skipAmount = -10;
@@ -187,15 +229,25 @@ void XtcReaderActivity::render(Activity::RenderLock&&) {
 
   renderPage();
   saveProgress();
+
+  if (pendingScreenshot) {
+    pendingScreenshot = false;
+    ScreenshotUtil::takeScreenshot(renderer);
+  }
 }
 
 void XtcReaderActivity::renderMenu() const {
+  if (!renderer.storeBwBuffer()) {
+    renderer.clearScreen();
+  }
   renderer.restoreBwBuffer();
+  // Re-store for subsequent renderMenu calls (e.g. selection move)
+  renderer.storeBwBuffer();
 
   const int sw = renderer.getScreenWidth();
   const int sh = renderer.getScreenHeight();
   const int mw = 320;
-  const int mh = 330;
+  const int mh = 385; // Taller for Screenshot option
   const int mx = (sw - mw) / 2;
   const int my = (sh - mh) / 2;
 
@@ -207,9 +259,9 @@ void XtcReaderActivity::renderMenu() const {
   renderer.drawRoundedRect(mx, my, mw, mh, 2, 10, textColor); // Use bool for border state
 
   const char* options[] = {"Resume", "Next 10%", "Back 10%", 
-                           darkMode ? "Day Mode" : "Dark Mode", "Exit"};
+                           darkMode ? "Day Mode" : "Dark Mode", "Screenshot", "Exit"};
   
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 6; i++) {
     int ry = my + 45 + (i * 55); // Adjusted spacing without title
     if (menuSelectedIndex == i) {
       renderer.fillRoundedRect(mx + 10, ry - 5, mw - 20, 40, 8, textColor ? Color::Black : Color::White);
@@ -371,6 +423,7 @@ void XtcReaderActivity::renderPage() {
     free(pageBuffer);
 
     // Overlay status bar on top of the rendered page bitmap
+    renderBookmarkIndicator();
     renderStatusBar();
     
     // In Dark Mode, because we didn't call displayGrayBuffer, we might need a final displayBuffer 
@@ -413,6 +466,7 @@ void XtcReaderActivity::renderPage() {
   free(pageBuffer);
 
   // Overlay status bar on top of the rendered page bitmap
+  renderBookmarkIndicator();
   renderStatusBar();
 
   // Display with appropriate refresh
@@ -462,6 +516,19 @@ void XtcReaderActivity::renderStatusBar() const {
   }
 }
 
+void XtcReaderActivity::renderBookmarkIndicator() const {
+  if (isPageBookmarked(currentPage)) {
+    const int sw = renderer.getScreenWidth();
+    const int rw = 20;
+    const int rh = 40;
+    const int rx = sw - rw - 30;
+    const int ry = 0;
+    
+    // Draw ribbon (inverted when in dark mode to stay visible)
+    renderer.fillRect(rx, ry, rw, rh, !SETTINGS.darkMode);
+  }
+}
+
 void XtcReaderActivity::saveProgress() const {
   FsFile f;
   if (Storage.openFileForWrite("XTR", xtc->getCachePath() + "/progress.bin", f)) {
@@ -506,4 +573,61 @@ void XtcReaderActivity::jumpPercent(int deltaPercent) {
 
   currentPage = static_cast<uint32_t>(targetPage);
   requestUpdate();
+}
+
+void XtcReaderActivity::saveBookmarks() const {
+  FsFile f;
+  if (Storage.openFileForWrite("XTR", xtc->getCachePath() + "/bookmarks.bin", f)) {
+    for (uint32_t b : bookmarks) {
+      uint8_t data[4];
+      data[0] = b & 0xFF;
+      data[1] = (b >> 8) & 0xFF;
+      data[2] = (b >> 16) & 0xFF;
+      data[3] = (b >> 24) & 0xFF;
+      f.write(data, 4);
+    }
+    f.close();
+  }
+}
+
+void XtcReaderActivity::loadBookmarks() {
+  bookmarks.clear();
+  FsFile f;
+  if (Storage.openFileForRead("XTR", xtc->getCachePath() + "/bookmarks.bin", f)) {
+    uint8_t data[4];
+    while (f.read(data, 4) == 4) {
+      uint32_t b = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+      bookmarks.push_back(b);
+    }
+    f.close();
+    std::sort(bookmarks.begin(), bookmarks.end());
+  }
+}
+
+void XtcReaderActivity::toggleBookmark() {
+  auto it = std::find(bookmarks.begin(), bookmarks.end(), currentPage);
+  if (it != bookmarks.end()) {
+    bookmarks.erase(it);
+  } else {
+    bookmarks.push_back(currentPage);
+    std::sort(bookmarks.begin(), bookmarks.end());
+  }
+  saveBookmarks();
+  requestUpdate();
+}
+
+void XtcReaderActivity::nextBookmark() {
+  if (bookmarks.empty()) return;
+
+  auto it = std::upper_bound(bookmarks.begin(), bookmarks.end(), currentPage);
+  if (it == bookmarks.end()) {
+    currentPage = bookmarks[0];
+  } else {
+    currentPage = *it;
+  }
+  requestUpdate();
+}
+
+bool XtcReaderActivity::isPageBookmarked(uint32_t page) const {
+  return std::find(bookmarks.begin(), bookmarks.end(), page) != bookmarks.end();
 }

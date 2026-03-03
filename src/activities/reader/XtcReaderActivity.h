@@ -23,12 +23,20 @@ class XtcReaderActivity final : public ActivityWithSubactivity {
 
   bool inMenu = false;
   int menuSelectedIndex = 0;
+  bool pendingScreenshot = false;
 
+  std::vector<uint32_t> bookmarks;
   void renderPage();
   void renderStatusBar() const;
+  void renderBookmarkIndicator() const;
   void renderMenu() const;
   void saveProgress() const;
   void loadProgress();
+  void saveBookmarks() const;
+  void loadBookmarks();
+  void toggleBookmark();
+  void nextBookmark();
+  bool isPageBookmarked(uint32_t page) const;
   void jumpPercent(int deltaPercent);
 
  public:
