@@ -313,8 +313,8 @@ void LyraTheme::drawList(const GfxRenderer& renderer, Rect rect, int itemCount, 
     }
 
     auto itemName = rowTitle(i);
-    auto item = renderer.truncatedText(UI_12_FONT_ID, itemName.c_str(), rowTextWidth);
-    renderer.drawText(UI_12_FONT_ID, textX, itemY + 7, item.c_str(), true);
+    auto item = renderer.truncatedText(NOTOSANS_14_FONT_ID, itemName.c_str(), rowTextWidth);
+    renderer.drawText(NOTOSANS_14_FONT_ID, textX, itemY + 5, item.c_str(), true);
 
     if (rowIcon != nullptr) {
       UIIcon icon = rowIcon(i);

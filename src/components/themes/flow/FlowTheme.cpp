@@ -183,8 +183,8 @@ void FlowTheme::drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCount
     int nudge = hasDescenders ? -8 : -4;
     
     // Text starts after the icon area (rowHeight ensures consistent spacing)
-    int textY = y + (rowHeight - renderer.getLineHeight(UI_12_FONT_ID)) / 2 + nudge;
-    renderer.drawText(UI_12_FONT_ID, menuLeft + rowHeight, textY, label.c_str(), true);
+    int textY = y + (rowHeight - renderer.getLineHeight(NOTOSANS_14_FONT_ID)) / 2 + nudge;
+    renderer.drawText(NOTOSANS_14_FONT_ID, menuLeft + rowHeight, textY, label.c_str(), Color::Black, EpdFontFamily::REGULAR);
   }
 }
 
@@ -199,6 +199,6 @@ void FlowTheme::drawFooter(GfxRenderer& renderer) const {
     char timeStr[48];
     snprintf(timeStr, sizeof(timeStr), "You have read for %uh %um", hours, minutes);
     
-    int textWidth = renderer.getTextWidth(SMALL_FONT_ID, timeStr);
-    renderer.drawText(SMALL_FONT_ID, pageWidth - textWidth - 25, pageHeight - 30, timeStr, true);
+    int textWidth = renderer.getTextWidth(NOTOSANS_12_FONT_ID, timeStr);
+    renderer.drawText(NOTOSANS_12_FONT_ID, pageWidth - textWidth - 25, pageHeight - 38, timeStr, Color::Black);
 }
