@@ -171,7 +171,7 @@ void HomeActivity::freeCoverBuffer() {
 
 void HomeActivity::loop() {
   const int bookCount = recentBooks.size();
-  const int menuCount = 5;
+  const int menuCount = 4;
 
   // Debounce/Cooldown (E-ink is slow, prevent multiple triggers)
   if (millis() - lastInputMs < 500) return;
@@ -223,8 +223,11 @@ void HomeActivity::loop() {
       } else {
         menuSelectorIndex--;
       }
-      requestUpdate();
+    } else if (focusZone == Zone::BOOKS) {
+      focusZone = Zone::MENU;
+      menuSelectorIndex = menuCount - 1; // Settings
     }
+    requestUpdate();
   }
   if (mappedInput.wasReleasedRaw(5)) { // DOWN
     lastInputMs = millis();
@@ -234,6 +237,8 @@ void HomeActivity::loop() {
     } else if (focusZone == Zone::MENU) {
       if (menuSelectorIndex < menuCount - 1) {
         menuSelectorIndex++;
+      } else {
+        focusZone = Zone::BOOKS;
       }
     }
     requestUpdate();
@@ -244,8 +249,7 @@ void HomeActivity::loop() {
     lastInputMs = millis();
     int idx = 0;
     const int myLibraryIdx = idx++;
-    const int flashcardIdx = idx++;
-    const int qubicIdx = idx++;
+    const int pluginsIdx = idx++;
     const int fileTransferIdx = idx++;
     const int settingsIdx = idx++;
 
@@ -254,10 +258,8 @@ void HomeActivity::loop() {
     } else if (focusZone == Zone::MENU) {
       if (menuSelectorIndex == myLibraryIdx) {
         onMyLibraryOpen();
-      } else if (menuSelectorIndex == flashcardIdx) {
-        onFlashcardOpen();
-      } else if (menuSelectorIndex == qubicIdx) {
-        onQubicOpen();
+      } else if (menuSelectorIndex == pluginsIdx) {
+        onPluginsOpen();
       } else if (menuSelectorIndex == fileTransferIdx) {
         onFileTransferOpen();
       } else if (menuSelectorIndex == settingsIdx) {
@@ -290,9 +292,9 @@ void HomeActivity::render(Activity::RenderLock&&) {
                           recentBooks, compatibleSelectorIndex, coverRendered, coverBufferStored, bufferRestored,
                           std::bind(&HomeActivity::storeCoverBuffer, this));
 
-  std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), "Flashcards",
-                                        "3D Tic-Tac-Toe", tr(STR_FILE_TRANSFER), tr(STR_SETTINGS_TITLE)};
-  std::vector<UIIcon> menuIcons = {Folder, Library, Game, Transfer, Settings};
+  std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), "App Plugins",
+                                        tr(STR_FILE_TRANSFER), tr(STR_SETTINGS_TITLE)};
+  std::vector<UIIcon> menuIcons = {Folder, Library, Transfer, Settings};
 
   // Add 30px extra spacing below books (+30) for better visual separation
   int menuY = metrics.homeTopPadding + metrics.homeCoverTileHeight + metrics.verticalSpacing + 30;

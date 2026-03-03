@@ -28,8 +28,7 @@ class HomeActivity final : public Activity {
   const std::function<void()> onRecentsOpen;
   const std::function<void()> onSettingsOpen;
   const std::function<void()> onFileTransferOpen;
-  const std::function<void()> onFlashcardOpen;
-  const std::function<void()> onQubicOpen;
+  const std::function<void()> onPluginsOpen;
 
   int getMenuItemCount() const;
   bool storeCoverBuffer();    // Store frame buffer for cover image
@@ -43,15 +42,14 @@ class HomeActivity final : public Activity {
                         const std::function<void(const std::string& path)>& onSelectBook,
                         const std::function<void()>& onMyLibraryOpen, const std::function<void()>& onRecentsOpen,
                         const std::function<void()>& onSettingsOpen, const std::function<void()>& onFileTransferOpen,
-                        const std::function<void()>& onFlashcardOpen, const std::function<void()>& onQubicOpen)
+                        const std::function<void()>& onPluginsOpen)
       : Activity("Home", renderer, mappedInput),
         onSelectBook(onSelectBook),
         onMyLibraryOpen(onMyLibraryOpen),
         onRecentsOpen(onRecentsOpen),
         onSettingsOpen(onSettingsOpen),
         onFileTransferOpen(onFileTransferOpen),
-        onFlashcardOpen(onFlashcardOpen),
-        onQubicOpen(onQubicOpen) {}
+        onPluginsOpen(onPluginsOpen) {}
   void onEnter() override;
   void onExit() override;
   void loop() override;

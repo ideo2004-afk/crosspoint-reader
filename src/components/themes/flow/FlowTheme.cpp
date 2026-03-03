@@ -154,11 +154,9 @@ void FlowTheme::drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCount
   const int rowHeight = FlowMetrics::values.menuRowHeight;
   const int spacing = FlowMetrics::values.menuSpacing;
   
-  // Align menu with the leftmost cover (B2)
-  // Left edge of B2 is at centerX - 190
   const int centerX = rect.width / 2;
   const int menuLeft = centerX - 190;
-  const int menuWidth = 380; // Symmetric width
+  const int menuWidth = 380;
   
   for (int i = 0; i < buttonCount; ++i) {
     const bool selected = (selectedIndex == i);
@@ -168,17 +166,25 @@ void FlowTheme::drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCount
       renderer.fillRoundedRect(menuLeft, y, menuWidth, rowHeight, cornerRadius, Color::LightGray);
     }
     
-    // Use LyraTheme's icon drawing logic
+    // Left-align icon with 12px padding from menuLeft (aligns with covers)
     if (rowIcon != nullptr) {
       UIIcon icon = rowIcon(i);
       const uint8_t* iconBitmap = LyraTheme::iconForName(icon, 32);
       if (iconBitmap != nullptr) {
+        // Center icon vertically in rowHeight
         renderer.drawIcon(iconBitmap, menuLeft + 12, y + (rowHeight - 32) / 2, 32, 32);
       }
     }
     
     std::string label = buttonLabel(i);
-    renderer.drawText(UI_12_FONT_ID, menuLeft + rowHeight, y + (rowHeight - renderer.getLineHeight(UI_12_FONT_ID)) / 2, label.c_str(), true);
+    // Dynamic Nudge: labels with descenders (g, j, p, q, y) need more upward correction to look visually centered.
+    // Labels without them look "too high" if we use the same correction.
+    bool hasDescenders = label.find_first_of("gjpqy") != std::string::npos;
+    int nudge = hasDescenders ? -8 : -4;
+    
+    // Text starts after the icon area (rowHeight ensures consistent spacing)
+    int textY = y + (rowHeight - renderer.getLineHeight(UI_12_FONT_ID)) / 2 + nudge;
+    renderer.drawText(UI_12_FONT_ID, menuLeft + rowHeight, textY, label.c_str(), true);
   }
 }
 

@@ -27,6 +27,7 @@
 #include "activities/reader/ReaderActivity.h"
 #include "activities/settings/SettingsActivity.h"
 #include "activities/util/FlashcardActivity.h"
+#include "activities/plugins/PluginsActivity.h"
 #include "activities/util/FullScreenMessageActivity.h"
 #include "activities/util/QubicActivity.h"
 #include "components/UITheme.h"
@@ -258,7 +259,7 @@ void onGoToQubic() {
 
 void onGoToMyLibrary() {
   exitActivity();
-  enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader));
+  enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader, "/books"));
 }
 
 void onGoToRecentBooks() {
@@ -276,10 +277,15 @@ void onGoToFlashcard() {
   enterNewActivity(new FlashcardActivity(renderer, mappedInputManager, onGoHome));
 }
 
+void onGoToPlugins() {
+  exitActivity();
+  enterNewActivity(new PluginsActivity(renderer, mappedInputManager, onGoHome, onGoToFlashcard, onGoToQubic));
+}
+
 void onGoHome() {
   exitActivity();
   enterNewActivity(new HomeActivity(renderer, mappedInputManager, onGoToReader, onGoToMyLibrary, onGoToRecentBooks,
-                                    onGoToSettings, onGoToFileTransfer, onGoToFlashcard, onGoToQubic));
+                                     onGoToSettings, onGoToFileTransfer, onGoToPlugins));
 }
 
 void setupDisplayAndFonts() {

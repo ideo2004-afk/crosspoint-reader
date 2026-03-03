@@ -35,13 +35,16 @@ void drawBatteryIcon(const GfxRenderer& renderer, int x, int y, int battWidth, i
   renderer.drawPixel(x + battWidth - 1, y + rectHeight - 4);
   renderer.drawLine(x + battWidth - 0, y + 4, x + battWidth - 0, y + rectHeight - 5);
 
-  // The +1 is to round up, so that we always fill at least one pixel
-  int filledWidth = percentage * (battWidth - 5) / 100 + 1;
-  if (filledWidth > battWidth - 5) {
-    filledWidth = battWidth - 5;  // Ensure we don't overflow
+  // Draw bars (3-bar design, restored to original black)
+  if (percentage > 10) {
+    renderer.fillRect(x + 2, y + 2, 3, rectHeight - 4, true);
   }
-
-  renderer.fillRect(x + 2, y + 2, filledWidth, rectHeight - 4);
+  if (percentage > 40) {
+    renderer.fillRect(x + 6, y + 2, 3, rectHeight - 4, true);
+  }
+  if (percentage > 70) {
+    renderer.fillRect(x + 10, y + 2, 3, rectHeight - 4, true);
+  }
 }
 }  // namespace
 

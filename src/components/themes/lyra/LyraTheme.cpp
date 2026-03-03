@@ -119,13 +119,13 @@ void LyraTheme::drawBatteryLeft(const GfxRenderer& renderer, Rect rect, const bo
 
   // Draw bars
   if (percentage > 10) {
-    renderer.fillRectDither(x + 2, y + 2, 3, rect.height - 4, Color::DarkGray);
+    renderer.fillRect(x + 2, y + 2, 3, rect.height - 4, true);
   }
   if (percentage > 40) {
-    renderer.fillRectDither(x + 6, y + 2, 3, rect.height - 4, Color::DarkGray);
+    renderer.fillRect(x + 6, y + 2, 3, rect.height - 4, true);
   }
   if (percentage > 70) {
-    renderer.fillRectDither(x + 10, y + 2, 3, rect.height - 4, Color::DarkGray);
+    renderer.fillRect(x + 10, y + 2, 3, rect.height - 4, true);
   }
 }
 
@@ -161,13 +161,13 @@ void LyraTheme::drawBatteryRight(const GfxRenderer& renderer, Rect rect, const b
 
   // Draw bars
   if (percentage > 10) {
-    renderer.fillRectDither(x + 2, y + 2, 3, rect.height - 4, Color::DarkGray);
+    renderer.fillRect(x + 2, y + 2, 3, rect.height - 4, true);
   }
   if (percentage > 40) {
-    renderer.fillRectDither(x + 6, y + 2, 3, rect.height - 4, Color::DarkGray);
+    renderer.fillRect(x + 6, y + 2, 3, rect.height - 4, true);
   }
   if (percentage > 70) {
-    renderer.fillRectDither(x + 10, y + 2, 3, rect.height - 4, Color::DarkGray);
+    renderer.fillRect(x + 10, y + 2, 3, rect.height - 4, true);
   }
 }
 
