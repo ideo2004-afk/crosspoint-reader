@@ -73,7 +73,7 @@ void FlashcardActivity::renderDeckMenu(bool fullRefresh) {
       renderer.fillRoundedRect(40, y - 5, screenWidth - 80, itemHeight, 8, Color::Black);
       renderer.drawText(UI_10_FONT_ID, 60, y + 10, decks[i].c_str(), false);
     } else {
-      renderer.drawText(UI_10_FONT_ID, 60, y + 10, decks[i].c_str(), true);
+      renderer.drawText(UI_10_FONT_ID, 60, y + 10, decks[i].c_str(), Color::Black);
     }
     y += itemHeight + 10;
   }
@@ -355,7 +355,7 @@ void FlashcardActivity::renderCard(int index, bool isBack, bool fullRefresh) {
       // black=false in drawText results in LightGray dither
       
       // Top-left: Deck Name 
-      renderer.drawText(SMALL_FONT_ID, 30, 30, selectedDeckName.c_str(), true); 
+      renderer.drawText(SMALL_FONT_ID, 30, 30, selectedDeckName.c_str(), Color::DarkGray); 
       
       // Bottom-left: Consolidated Status
       char statusLine[64];
@@ -363,15 +363,15 @@ void FlashcardActivity::renderCard(int index, bool isBack, bool fullRefresh) {
       for (const auto& c : cards) if (c.learned) learnedCount++;
       snprintf(statusLine, sizeof(statusLine), "%d / %u | Learned: %d", 
                index + 1, (unsigned int)cards.size(), learnedCount);
-      renderer.drawText(SMALL_FONT_ID, 30, ph - 30, statusLine, true);
+      renderer.drawText(SMALL_FONT_ID, 30, ph - 30, statusLine, Color::DarkGray);
       
       // Right edge: Rotated Button Hints (Plain text, rotated)
       int hintX = pw - 30; // Safely away from the 800 edge
       int hintY1 = 400;    // Top cluster (labels RANDOM / EXIT)
       int hintY2 = 200;    // Bottom cluster (labels FLIP / LEARNED)
       
-      renderer.drawTextRotated90CW(SMALL_FONT_ID, hintX, hintY1, "RANDOM / EXIT", true);
-      renderer.drawTextRotated90CW(SMALL_FONT_ID, hintX, hintY2, "FLIP / LEARNED", true);
+      renderer.drawTextRotated90CW(SMALL_FONT_ID, hintX, hintY1, "RANDOM / EXIT", Color::DarkGray);
+      renderer.drawTextRotated90CW(SMALL_FONT_ID, hintX, hintY2, "FLIP / LEARNED", Color::DarkGray);
 
       renderer.displayBuffer(fullRefresh ? HalDisplay::FULL_REFRESH : HalDisplay::FAST_REFRESH);
       renderer.setOrientation(GfxRenderer::Orientation::Portrait);

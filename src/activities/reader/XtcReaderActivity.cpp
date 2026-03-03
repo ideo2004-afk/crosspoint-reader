@@ -459,7 +459,8 @@ void XtcReaderActivity::renderStatusBar() const {
     char pageBuf[16];
     snprintf(pageBuf, sizeof(pageBuf), "%lu", (unsigned long)(currentPage + 1));
     int textWidth = renderer.getTextWidth(SMALL_FONT_ID, pageBuf);
-    renderer.drawText(SMALL_FONT_ID, sideMargin + availableWidth - textWidth, y - renderer.getLineHeight(SMALL_FONT_ID), pageBuf, textColor);
+    renderer.drawText(SMALL_FONT_ID, sideMargin + availableWidth - textWidth, y - renderer.getLineHeight(SMALL_FONT_ID), pageBuf, 
+                      SETTINGS.darkMode ? Color::LightGray : Color::DarkGray);
   }
 }
 

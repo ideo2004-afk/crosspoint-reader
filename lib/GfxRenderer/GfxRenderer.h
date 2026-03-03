@@ -12,6 +12,14 @@
 // 0 = transparent, 1-16 = gray levels (white to black)
 enum Color : uint8_t { Clear = 0x00, White = 0x01, LightGray = 0x05, DarkGray = 0x0A, Black = 0x10 };
 
+// Compatibility wrapper to allow both bool (black/white) and Color (dithered grays)
+struct TextColor {
+  Color val;
+  TextColor(Color c) : val(c) {}
+  TextColor(bool black) : val(black ? Black : White) {}
+  operator Color() const { return val; }
+};
+
 class GfxRenderer {
  public:
   enum RenderMode { BW, GRAYSCALE_LSB, GRAYSCALE_MSB };
@@ -39,7 +47,7 @@ class GfxRenderer {
   std::map<int, EpdFontFamily> fontMap;
   int fallbackFontId = -1;
   FontDecompressor* fontDecompressor = nullptr;
-  void renderChar(const EpdFontFamily& fontFamily, uint32_t cp, int* x, int* y, bool pixelState,
+  void renderChar(const EpdFontFamily& fontFamily, uint32_t cp, int* x, int* y, Color color,
                   EpdFontFamily::Style style) const;
   void freeBwBufferChunks();
   template <Color color>
@@ -107,9 +115,9 @@ class GfxRenderer {
 
   // Text
   int getTextWidth(int fontId, const char* text, EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
-  void drawCenteredText(int fontId, int y, const char* text, bool black = true,
+  void drawCenteredText(int fontId, int y, const char* text, TextColor color = Black,
                         EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
-  void drawText(int fontId, int x, int y, const char* text, bool black = true,
+  void drawText(int fontId, int x, int y, const char* text, TextColor color = Black,
                 EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
   int getSpaceWidth(int fontId, EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
   /// Returns the kerning adjustment for a space between two codepoints:
@@ -124,7 +132,7 @@ class GfxRenderer {
                             EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
 
   // Helper for drawing rotated text (90 degrees clockwise, for side buttons)
-  void drawTextRotated90CW(int fontId, int x, int y, const char* text, bool black = true,
+  void drawTextRotated90CW(int fontId, int x, int y, const char* text, TextColor color = Black,
                            EpdFontFamily::Style style = EpdFontFamily::REGULAR) const;
   int getTextHeight(int fontId) const;
 

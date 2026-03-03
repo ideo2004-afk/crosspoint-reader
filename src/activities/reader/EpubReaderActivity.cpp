@@ -800,6 +800,7 @@ void EpubReaderActivity::renderStatusBar(const int orientedMarginRight, const in
     char pageBuf[16];
     snprintf(pageBuf, sizeof(pageBuf), "%d", section->currentPage + 1);
     int textWidth = renderer.getTextWidth(SMALL_FONT_ID, pageBuf);
-    renderer.drawText(SMALL_FONT_ID, orientedMarginLeft + viewportWidth - textWidth, y - renderer.getLineHeight(SMALL_FONT_ID), pageBuf, textColor);
+    renderer.drawText(SMALL_FONT_ID, orientedMarginLeft + viewportWidth - textWidth, y - renderer.getLineHeight(SMALL_FONT_ID), pageBuf, 
+                      SETTINGS.darkMode ? Color::LightGray : Color::DarkGray);
   }
 }

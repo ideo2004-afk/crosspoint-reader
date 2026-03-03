@@ -106,8 +106,8 @@ bool QubicActivity::handleInput() {
   bool confirmPressed = mappedInput.wasShortPressedRaw(HalGPIO::BTN_BACK) || 
                          mappedInput.wasShortPressedRaw(HalGPIO::BTN_CONFIRM);
                          
-  bool menuLongPressed = mappedInput.wasLongPressedRaw(HalGPIO::BTN_BACK) || 
-                          mappedInput.wasLongPressedRaw(HalGPIO::BTN_CONFIRM);
+  bool menuLongPressed = mappedInput.wasLongPressedRaw(HalGPIO::BTN_LEFT) || 
+                          mappedInput.wasLongPressedRaw(HalGPIO::BTN_RIGHT);
 
   if (menuLongPressed) {
       inEscMenu = true;
@@ -193,7 +193,7 @@ void QubicActivity::renderBoard(bool fullRefresh) {
   renderer.fillRect(0, 60, renderer.getScreenWidth(), 3, true); // Thick line
 
   std::string diffLabel = (aiDifficulty == 1) ? "L1 (Easy)" : (aiDifficulty == 2) ? "L2 (Medium)" : "L3 (Hard)";
-  renderer.drawText(SMALL_FONT_ID, 20, 80, diffLabel.c_str(), true);
+  renderer.drawText(UI_12_FONT_ID, 20, 80, diffLabel.c_str(), true);
 
 
   // 2. Draw Layer Labels (removed)
