@@ -634,7 +634,7 @@ bool PngToBmpConverter::pngFileToBmpStreamInternal(FsFile& pngFile, Print& bmpOu
   Atkinson1BitDitherer* atkinson1BitDitherer = nullptr;
 
   if (oneBit) {
-    atkinson1BitDitherer = nullptr; // Use cleaner Bayer Ordered Dithering instead of Atkinson error diffusion
+    atkinson1BitDitherer = new Atkinson1BitDitherer(outWidth);
   } else if (!USE_8BIT_OUTPUT) {
     if (USE_ATKINSON) {
       atkinsonDitherer = new AtkinsonDitherer(outWidth);

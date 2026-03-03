@@ -7,6 +7,7 @@
 
 #include "Xtc.h"
 
+#include <BitmapHelpers.h>
 #include <HalStorage.h>
 #line 11
 #include <Logging.h>
@@ -509,6 +510,8 @@ bool Xtc::generateThumbBmp(int height) const {
 
   uint32_t scaleInv_fp = static_cast<uint32_t>(65536.0f / scale);
 
+  Atkinson1BitDitherer ditherer(THUMB_TARGET_WIDTH);
+
   for (int32_t dstY = 0; dstY < THUMB_TARGET_HEIGHT; dstY++) {
     // Fill row with white
     memset(rowBuffer, 0xFF, rowSize);
@@ -537,20 +540,18 @@ bool Xtc::generateThumbBmp(int height) const {
             } else {
               grayVal = ((pageBuffer[srcY * bpcSrcRowBytes + srcX / 8] >> (7 - (srcX % 8))) & 1) ? 255 : 0;
             }
-            graySum += grayVal; totalCount++;
+            graySum += grayVal;
+            totalCount++;
           }
         }
 
         uint8_t avgGray = (totalCount > 0) ? static_cast<uint8_t>(graySum / totalCount) : 255;
-        static const uint8_t bayer[8][8] = {
-            {0, 32, 8, 40, 2, 34, 10, 42}, {48, 16, 56, 24, 50, 18, 58, 26},
-            {12, 44, 4, 36, 14, 46, 6, 38}, {60, 28, 52, 20, 62, 30, 54, 22},
-            {3, 35, 11, 43, 1, 33, 9, 41},  {51, 19, 59, 27, 49, 17, 57, 25},
-            {15, 47, 7, 39, 13, 45, 5, 37}, {63, 31, 55, 23, 61, 29, 53, 21}};
-        if (avgGray < bayer[dstY % 8][dstX % 8] * 4) {
+        const uint8_t bit = ditherer.processPixel(avgGray, dstX);
+        if (bit == 0) {
           rowBuffer[dstX / 8] &= ~(1 << (7 - (dstX % 8))); // Black
         }
       }
+      ditherer.nextRow();
     }
     thumbBmp.write(rowBuffer, rowSize);
   }
