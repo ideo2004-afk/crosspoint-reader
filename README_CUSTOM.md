@@ -7,14 +7,16 @@ This is a highly customized firmware loop for the XTEINK X4 e-ink reader. It foc
 - **Global Reading Statistics (`ReadingStatsActivity`)**: A centralized tracking system that records reading time across all formats (`.epub`, `.xtc`, `.txt`). Because the ESP32 lacks an RTC, it tracks time using the hardware `millis()` timer. View total accumulated time and per-book engagement in the System settings.
 - **3D Tic-Tac-Toe Game (`QubicActivity`)**: A perfectly optimized, memory-safe 3D Tic-Tac-Toe game playable directly on the e-ink screen. (Includes a sophisticated Use-After-Free memory fix during exit transitions).
 - **Flashcard System**: A custom module designed for English vocabulary learning directly on the device.
-- **Bayer Dithering Algorithm**: Replaced the chaotic random noise dithering with an industry-standard 8x8 Bayer Matrix Ordered Dithering algorithm. This results in beautiful, newspaper-quality halftone rendering for all 1-bit book cover thumbnails.
-- **Custom Boot Logo**: Integrated a personalized seal as the 120x120 E-Ink boot screen logo, properly rotated to exactly align with the specific screen orientation.
+- **Floating Menu System**: A unified, modern floating menu architecture used in Qubic, XTC, and EPUB readers. Features a 10px rounded corner aesthetic, rounded selection highlights, and adaptive positioning. It provides a "Premium E-Ink" experience without sacrificing 1-bit refresh speeds.
+- **Bayer Dithering Algorithm**: Replaced the chaotic random noise dithering with an industry-standard 8x8 Bayer Matrix Ordered Dithering algorithm for image thumbnails.
+- **High-Contrast Text Anti-Aliasing**: Implemented in `GfxRenderer` to provide smoother UI text. It uses a "Solid Core + Dithered Edges" strategy (effectively 2-bit grayscale simulated via 1-bit dithering), making small fonts readable and smooth without appearing fuzzy.
 
 ## 🎨 UI/UX Refinements
 
-- **Minimalist Status Bar**: Removed all battery icons, progress bars, and clutter. Now displays only a clean, centered "current/total page" text configuration to maximize reading immersion and reduce e-ink refresh artifacting.
-- **Recent Books Layout**: Enhanced the 9-grid Recent Books menu by restricting dynamic cover scaling, adding 1px minimalist selector borders, and widening horizontal/vertical cover spacing for a cleaner aesthetic.
-- **CJK Font Fallbacks**: Ensured the UI safely extracts actual filenames instead of missing or un-renderable metadata (which previously displayed as squares), bypassing the memory-overflow issues seen in other CJK forks.
+- **Refined Status Bar & Auxiliary Info**: Page numbers and secondary UI elements now use a 50% chessboard dither (`Color::DarkGray`) to recede visually, reducing distraction. In Dark Mode, this automatically inverts to a white-dithered gray.
+- **Minimalist Layout**: Removed battery icon/progress bars from the status bar for a clean, centered "current/total page" configuration.
+- **Recent Books Layout**: Enhanced the 9-grid Recent Books menu with minimal selector borders and optimized spacing.
+- **CJK Font Fallbacks**: Optimized metadata extraction to prevent squares/tofu characters without excessive memory overhead.
 
 ## 🗑️ Aggressive Debloat (Memory Optimization)
 
