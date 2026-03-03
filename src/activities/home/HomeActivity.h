@@ -11,13 +11,17 @@ struct Rect;
 
 class HomeActivity final : public Activity {
   ButtonNavigator buttonNavigator;
-  int selectorIndex = 0;
+  enum class Zone { BOOKS, MENU };
+  Zone focusZone = Zone::BOOKS;
+  int bookSelectorIndex = 0;
+  int menuSelectorIndex = 0;
   bool recentsLoading = false;
   bool recentsLoaded = false;
   bool firstRenderDone = false;
   bool coverRendered = false;      // Track if cover has been rendered once
   bool coverBufferStored = false;  // Track if cover buffer is stored
   uint8_t* coverBuffer = nullptr;  // HomeActivity's own buffer for cover image
+  uint32_t lastInputMs = 0;        // Cooldown for bounce
   std::vector<RecentBook> recentBooks;
   const std::function<void(const std::string& path)> onSelectBook;
   const std::function<void()> onMyLibraryOpen;

@@ -109,7 +109,9 @@ void HomeActivity::loadRecentCovers(int coverHeight) {
 void HomeActivity::onEnter() {
   Activity::onEnter();
 
-  selectorIndex = 0;
+  bookSelectorIndex = 0;
+  menuSelectorIndex = 0;
+  focusZone = Zone::BOOKS;
 
   const auto& metrics = UITheme::getInstance().getMetrics();
   loadRecentBooks(metrics.homeRecentBooksCount);
@@ -168,49 +170,101 @@ void HomeActivity::freeCoverBuffer() {
 }
 
 void HomeActivity::loop() {
-  const int menuCount = getMenuItemCount();
+  const int bookCount = recentBooks.size();
+  const int menuCount = 5;
 
-  buttonNavigator.onNext([this, menuCount] {
-    selectorIndex = ButtonNavigator::nextIndex(selectorIndex, menuCount);
+  // Debounce/Cooldown (E-ink is slow, prevent multiple triggers)
+  if (millis() - lastInputMs < 500) return;
+
+  auto getNextBookIdx = [](int cur, int total) {
+    if (total <= 1) return 0;
+    if (cur == 1) return 0; // B2 -> B1
+    if (cur == 0) return (total > 2) ? 2 : 1; // B1 -> B3 (or wrap)
+    if (cur == total - 1) return (total > 1) ? 1 : 0; // B6 -> B2
+    return cur + 1; // B3 -> B4 -> B5
+  };
+  
+  auto getPrevBookIdx = [](int cur, int total) {
+    if (total <= 1) return 0;
+    if (cur == 0) return 1; // B1 -> B2
+    if (cur == 1) return total - 1; // B2 -> B6
+    if (cur == 2) return 0; // B3 -> B1
+    return cur - 1; // B6 -> B5 ...
+  };
+
+  // Per user request:
+  // [ 2 1 3 ] -> Right -> [ 1 3 4 ]
+  // [ B2 B1 B3 ] -> Left -> [ B4 B2 B1 ]
+
+  // Use "左下按鍵" (Cluster Left: 0, 1) for book cycling
+  if (mappedInput.wasReleasedRaw(0)) { // LEFT Cluster Left
+    if (bookCount > 0) {
+      lastInputMs = millis();
+      focusZone = Zone::BOOKS;
+      bookSelectorIndex = getPrevBookIdx(bookSelectorIndex, bookCount);
+      requestUpdate();
+    }
+  }
+  if (mappedInput.wasReleasedRaw(1)) { // LEFT Cluster Right
+    if (bookCount > 0) {
+      lastInputMs = millis();
+      focusZone = Zone::BOOKS;
+      bookSelectorIndex = getNextBookIdx(bookSelectorIndex, bookCount);
+      requestUpdate();
+    }
+  }
+
+  // Use Side buttons (4, 5) for focus/menu navigation
+  if (mappedInput.wasReleasedRaw(4)) { // UP
+    lastInputMs = millis();
+    if (focusZone == Zone::MENU) {
+      if (menuSelectorIndex == 0) {
+        focusZone = Zone::BOOKS;
+      } else {
+        menuSelectorIndex--;
+      }
+      requestUpdate();
+    }
+  }
+  if (mappedInput.wasReleasedRaw(5)) { // DOWN
+    lastInputMs = millis();
+    if (focusZone == Zone::BOOKS) {
+      focusZone = Zone::MENU;
+      menuSelectorIndex = 0;
+    } else if (focusZone == Zone::MENU) {
+      if (menuSelectorIndex < menuCount - 1) {
+        menuSelectorIndex++;
+      }
+    }
     requestUpdate();
-  });
+  }
 
-  buttonNavigator.onPrevious([this, menuCount] {
-    selectorIndex = ButtonNavigator::previousIndex(selectorIndex, menuCount);
-    requestUpdate();
-  });
-
-  // Front RIGHT cluster (LEFT + RIGHT): Select / Toggle (Snappy)
-  const bool selectPressed = mappedInput.wasShortPressed(MappedInputManager::Button::Confirm, 500);
-  if (selectPressed) {
+  // Use "右下前端" (Cluster Right: 2, 3) for Confirmation
+  if (mappedInput.wasReleasedRaw(2) || mappedInput.wasReleasedRaw(3)) {
+    lastInputMs = millis();
     int idx = 0;
-    int menuSelectedIndex = selectorIndex - static_cast<int>(recentBooks.size());
     const int myLibraryIdx = idx++;
-    const int recentsIdx = idx++;
     const int flashcardIdx = idx++;
     const int qubicIdx = idx++;
     const int fileTransferIdx = idx++;
     const int settingsIdx = idx++;
 
-    if (selectorIndex < recentBooks.size()) {
-      onSelectBook(recentBooks[selectorIndex].path);
-    } else if (menuSelectedIndex == myLibraryIdx) {
-      onMyLibraryOpen();
-    } else if (menuSelectedIndex == recentsIdx) {
-      onRecentsOpen();
-    } else if (menuSelectedIndex == flashcardIdx) {
-      onFlashcardOpen();
-    } else if (menuSelectedIndex == qubicIdx) {
-      onQubicOpen();
-    } else if (menuSelectedIndex == fileTransferIdx) {
-      onFileTransferOpen();
-    } else if (menuSelectedIndex == settingsIdx) {
-      onSettingsOpen();
+    if (focusZone == Zone::BOOKS && !recentBooks.empty()) {
+      onSelectBook(recentBooks[bookSelectorIndex].path);
+    } else if (focusZone == Zone::MENU) {
+      if (menuSelectorIndex == myLibraryIdx) {
+        onMyLibraryOpen();
+      } else if (menuSelectorIndex == flashcardIdx) {
+        onFlashcardOpen();
+      } else if (menuSelectorIndex == qubicIdx) {
+        onQubicOpen();
+      } else if (menuSelectorIndex == fileTransferIdx) {
+        onFileTransferOpen();
+      } else if (menuSelectorIndex == settingsIdx) {
+        onSettingsOpen();
+      }
     }
   }
-
-  // Front LEFT cluster (BACK + CONFIRM): do nothing on home screen (already at top level)
-  // (intentionally left empty — no parent to go back to)
 }
 
 void HomeActivity::render(Activity::RenderLock&&) {
@@ -223,20 +277,30 @@ void HomeActivity::render(Activity::RenderLock&&) {
 
   GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.homeTopPadding}, nullptr);
 
+  // Calculate a compatible selectorIndex for legacy themes
+  // For FlowTheme, we pass (1000 + bookSelectorIndex) when focus is on menu to retain state
+  int compatibleSelectorIndex = -1;
+  if (focusZone == Zone::BOOKS) {
+    compatibleSelectorIndex = bookSelectorIndex;
+  } else {
+    compatibleSelectorIndex = 1000 + bookSelectorIndex;
+  }
+
   GUI.drawRecentBookCover(renderer, Rect{0, metrics.homeTopPadding, pageWidth, metrics.homeCoverTileHeight},
-                          recentBooks, selectorIndex, coverRendered, coverBufferStored, bufferRestored,
+                          recentBooks, compatibleSelectorIndex, coverRendered, coverBufferStored, bufferRestored,
                           std::bind(&HomeActivity::storeCoverBuffer, this));
 
-  std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), tr(STR_MENU_RECENT_BOOKS), "Flashcards",
+  std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), "Flashcards",
                                         "3D Tic-Tac-Toe", tr(STR_FILE_TRANSFER), tr(STR_SETTINGS_TITLE)};
-  std::vector<UIIcon> menuIcons = {Folder, Recent, Library, Game, Transfer, Settings};
+  std::vector<UIIcon> menuIcons = {Folder, Library, Game, Transfer, Settings};
 
+  // Add 30px extra spacing below books (+30) for better visual separation
+  int menuY = metrics.homeTopPadding + metrics.homeCoverTileHeight + metrics.verticalSpacing + 30;
   GUI.drawButtonMenu(
       renderer,
-      Rect{0, metrics.homeTopPadding + metrics.homeCoverTileHeight + metrics.verticalSpacing, pageWidth,
-           pageHeight - (metrics.headerHeight + metrics.homeTopPadding + metrics.verticalSpacing * 2 +
-                         metrics.buttonHintsHeight)},
-      static_cast<int>(menuItems.size()), selectorIndex - recentBooks.size(),
+      Rect{0, menuY, pageWidth,
+           pageHeight - (menuY + metrics.buttonHintsHeight)},
+      static_cast<int>(menuItems.size()), focusZone == Zone::MENU ? menuSelectorIndex : -1,
       [&menuItems](int index) { return std::string(menuItems[index]); },
       [&menuIcons](int index) { return menuIcons[index]; });
 
@@ -248,6 +312,10 @@ void HomeActivity::render(Activity::RenderLock&&) {
     requestUpdate();
   } else if (!recentsLoaded && !recentsLoading) {
     recentsLoading = true;
-    loadRecentCovers(metrics.homeCoverHeight);
+    loadRecentCovers(metrics.homeCoverHeight); // 294 for Flow
+    // Also pre-generate for Flow side covers (200 height)
+    if (SETTINGS.uiTheme == (int)CrossPointSettings::UI_THEME::FLOW) {
+      loadRecentCovers(200);
+    }
   }
 }
