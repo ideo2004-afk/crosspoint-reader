@@ -652,7 +652,7 @@ bool Epub::generateThumbBmp(int height) const {
     }
     // Use smaller target size for Continue Reading card (half of screen: 240x400)
     // Generate 1-bit BMP for fast home screen rendering (no gray passes needed)
-    int THUMB_TARGET_WIDTH = height * 0.6;
+    int THUMB_TARGET_WIDTH = height * 0.75;
     int THUMB_TARGET_HEIGHT = height;
     const bool success = JpegToBmpConverter::jpegFileTo1BitBmpStreamWithSize(coverJpg, thumbBmp, THUMB_TARGET_WIDTH,
                                                                              THUMB_TARGET_HEIGHT);
@@ -686,7 +686,7 @@ bool Epub::generateThumbBmp(int height) const {
       coverPng.close();
       return false;
     }
-    int THUMB_TARGET_WIDTH = height * 0.6;
+    int THUMB_TARGET_WIDTH = height * 0.75;
     int THUMB_TARGET_HEIGHT = height;
     const bool success =
         PngToBmpConverter::pngFileTo1BitBmpStreamWithSize(coverPng, thumbBmp, THUMB_TARGET_WIDTH, THUMB_TARGET_HEIGHT);
