@@ -203,18 +203,16 @@ void XtcReaderActivity::renderMenu() const {
   const bool textColor = !darkMode;
 
   // Border and Background
-  renderer.fillRect(mx - 4, my - 4, mw + 8, mh + 8, textColor);
-  renderer.fillRect(mx, my, mw, mh, darkMode);
-
-  renderer.drawText(UI_12_FONT_ID, mx + 20, my + 20, "Reader Menu", textColor, EpdFontFamily::BOLD);
+  renderer.fillRoundedRect(mx, my, mw, mh, 10, darkMode ? Color::Black : Color::White);
+  renderer.drawRoundedRect(mx, my, mw, mh, 2, 10, textColor); // Use bool for border state
 
   const char* options[] = {"Resume", "Next 10%", "Back 10%", 
                            darkMode ? "Day Mode" : "Dark Mode", "Exit"};
   
   for (int i = 0; i < 5; i++) {
-    int ry = my + 65 + (i * 50);
+    int ry = my + 45 + (i * 55); // Adjusted spacing without title
     if (menuSelectedIndex == i) {
-      renderer.fillRect(mx + 10, ry - 5, mw - 20, 40, textColor);
+      renderer.fillRoundedRect(mx + 10, ry - 5, mw - 20, 40, 8, textColor ? Color::Black : Color::White);
     }
     
     renderer.drawText(UI_12_FONT_ID, mx + 20, ry + 2, options[i], (menuSelectedIndex != i) ? textColor : darkMode);

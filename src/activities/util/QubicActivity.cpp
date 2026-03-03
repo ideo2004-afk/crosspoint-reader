@@ -291,8 +291,8 @@ void QubicActivity::renderEscMenu() {
     int mx = (sw - mw) / 2;
     int my = (sh - mh) / 2;
 
-    renderer.fillRect(mx - 4, my - 4, mw + 8, mh + 8, true); // Border
-    renderer.fillRect(mx, my, mw, mh, false); // Background (white)
+    renderer.fillRoundedRect(mx, my, mw, mh, 10, Color::White);
+    renderer.drawRoundedRect(mx, my, mw, mh, 2, 10, true);
     
     renderer.drawText(UI_12_FONT_ID, mx + 20, my + 20, "Game Menu", true, EpdFontFamily::BOLD);
     
@@ -301,7 +301,7 @@ void QubicActivity::renderEscMenu() {
     for (int i = 0; i < 5; i++) {
         int ry = my + 65 + (i * 50);
         if (escMenuIndex == i) {
-            renderer.fillRect(mx + 10, ry - 5, mw - 20, 40, true);
+            renderer.fillRoundedRect(mx + 10, ry - 5, mw - 20, 40, 8, Color::Black);
         }
         
         bool blackText = (escMenuIndex != i);

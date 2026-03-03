@@ -665,8 +665,8 @@ void EpubReaderActivity::renderMenu() const {
   const int my = (sh - mh) / 2;
 
   // Border and Background
-  renderer.fillRect(mx - 4, my - 4, mw + 8, mh + 8, true);
-  renderer.fillRect(mx, my, mw, mh, false);
+  renderer.fillRoundedRect(mx, my, mw, mh, 10, Color::White);
+  renderer.drawRoundedRect(mx, my, mw, mh, 2, 10, true); // Use bool for border state
 
   const char* options[] = {"Resume", "Table of Contents", "Next 10%", "Back 10%", 
                            "Dark/Day", "Orientation", "Screenshot", "Exit"};
@@ -674,7 +674,7 @@ void EpubReaderActivity::renderMenu() const {
   for (int i = 0; i < 8; i++) {
     int ry = my + 15 + (i * 50);
     if (menuSelectedIndex == i) {
-      renderer.fillRect(mx + 10, ry - 5, mw - 20, 40, true);
+      renderer.fillRoundedRect(mx + 10, ry - 5, mw - 20, 40, 8, Color::Black);
     }
     
     renderer.drawText(UI_12_FONT_ID, mx + 20, ry + 2, options[i], (menuSelectedIndex != i));
