@@ -263,17 +263,50 @@ void EpubReaderActivity::loop() {
   const bool rbPressed = mappedInput.isPressedRaw(HalGPIO::BTN_LEFT) || mappedInput.isPressedRaw(HalGPIO::BTN_RIGHT);
 
   if (lbPressed && mappedInput.wasPressedRaw(HalGPIO::BTN_DOWN)) {
-    toggleBookmark();
+    // LB + Side Down = Skip -10 pages
     if (mappedInput.isPressedRaw(HalGPIO::BTN_BACK)) mappedInput.consumeButtonRaw(HalGPIO::BTN_BACK);
     if (mappedInput.isPressedRaw(HalGPIO::BTN_CONFIRM)) mappedInput.consumeButtonRaw(HalGPIO::BTN_CONFIRM);
     mappedInput.consumeButtonRaw(HalGPIO::BTN_DOWN);
+    
+    // Trigger update with delta
+    int delta = -10;
+    if (section) {
+      int targetPage = section->currentPage + delta;
+      if (targetPage < 0 && currentSpineIndex > 0) {
+        RenderLock lock(*this);
+        nextPageNumber = UINT16_MAX;
+        currentSpineIndex--;
+        section.reset();
+      } else if (targetPage < 0) {
+        section->currentPage = 0;
+      } else {
+        section->currentPage = targetPage;
+      }
+    }
+    requestUpdate();
     return;
   }
   if (lbPressed && mappedInput.wasPressedRaw(HalGPIO::BTN_UP)) {
-    nextBookmark();
+    // LB + Side Up = Skip +10 pages
     if (mappedInput.isPressedRaw(HalGPIO::BTN_BACK)) mappedInput.consumeButtonRaw(HalGPIO::BTN_BACK);
     if (mappedInput.isPressedRaw(HalGPIO::BTN_CONFIRM)) mappedInput.consumeButtonRaw(HalGPIO::BTN_CONFIRM);
     mappedInput.consumeButtonRaw(HalGPIO::BTN_UP);
+
+    int delta = 10;
+    if (section) {
+      int targetPage = section->currentPage + delta;
+      if (targetPage >= section->pageCount && currentSpineIndex < (epub ? epub->getSpineItemsCount() - 1 : 0)) {
+        RenderLock lock(*this);
+        nextPageNumber = 0;
+        currentSpineIndex++;
+        section.reset();
+      } else if (targetPage >= section->pageCount) {
+        section->currentPage = section->pageCount - 1;
+      } else {
+        section->currentPage = targetPage;
+      }
+    }
+    requestUpdate();
     return;
   }
   if (rbPressed && mappedInput.wasPressedRaw(HalGPIO::BTN_UP)) {
@@ -297,9 +330,13 @@ void EpubReaderActivity::loop() {
 
   // Determine page delta
   int delta = 0;
-  if (sideUpLong)        delta = 10;
-  else if (sideDownLong) delta = -10;
-  else if (frontRightShort || sideUpShort) delta = 1;
+  if (sideUpLong) {
+    nextBookmark();
+    return;
+  } else if (sideDownLong) {
+    toggleBookmark();
+    return;
+  } else if (frontRightShort || sideUpShort) delta = 1;
   else if (frontLeftShort || sideDownShort) delta = -1;
 
   if (delta == 0) {

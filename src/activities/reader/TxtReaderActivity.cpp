@@ -119,6 +119,27 @@ void TxtReaderActivity::loop() {
   const bool sideDownShort = mappedInput.wasReleasedRaw(HalGPIO::BTN_DOWN) && mappedInput.getHeldTime() < longPressMs;
   const bool sideDownLong  = mappedInput.wasLongPressed(MappedInputManager::Button::Down, longPressMs);
 
+  const bool lbPressed = mappedInput.isPressedAnyOf(HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM);
+
+  if (lbPressed && mappedInput.wasReleasedRaw(HalGPIO::BTN_UP)) {
+    // LB + Side Up = Jump +10
+    int target = static_cast<int>(currentPage) + 10;
+    if (target >= totalPages) target = totalPages - 1;
+    currentPage = static_cast<uint32_t>(target);
+    mappedInput.consumeButtonRaw(HalGPIO::BTN_UP);
+    requestUpdate();
+    return;
+  }
+  if (lbPressed && mappedInput.wasReleasedRaw(HalGPIO::BTN_DOWN)) {
+    // LB + Side Down = Jump -10
+    int target = static_cast<int>(currentPage) - 10;
+    if (target < 0) target = 0;
+    currentPage = static_cast<uint32_t>(target);
+    mappedInput.consumeButtonRaw(HalGPIO::BTN_DOWN);
+    requestUpdate();
+    return;
+  }
+
   int delta = 0;
   if (sideUpLong)           delta = 10;
   else if (sideDownLong)    delta = -10;

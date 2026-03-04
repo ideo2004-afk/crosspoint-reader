@@ -142,10 +142,10 @@ void XtcReaderActivity::loop() {
   const bool frontRightShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_LEFT, 500) || 
                                mappedInput.wasShortPressedRaw(HalGPIO::BTN_RIGHT, 500);
 
-  // Side UP: short=next, long=+10
-  const bool sideUpShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_UP, 500);
-  const bool sideUpLong  = mappedInput.wasLongPressedRaw(HalGPIO::BTN_UP, 500);
-  // Side DOWN: short=prev, long=-10
+  // Side UP: short=next, long=next bookmark
+  const bool sideUpShort   = mappedInput.wasShortPressedRaw(HalGPIO::BTN_UP, 500);
+  const bool sideUpLong    = mappedInput.wasLongPressedRaw(HalGPIO::BTN_UP, 500);
+  // Side DOWN: short=prev, long=toggle bookmark
   const bool sideDownShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_DOWN, 500);
   const bool sideDownLong  = mappedInput.wasLongPressedRaw(HalGPIO::BTN_DOWN, 500);
 
@@ -157,17 +157,22 @@ void XtcReaderActivity::loop() {
   const bool rbPressed = mappedInput.isPressedRaw(HalGPIO::BTN_LEFT) || mappedInput.isPressedRaw(HalGPIO::BTN_RIGHT);
 
   if (lbPressed && mappedInput.wasPressedRaw(HalGPIO::BTN_DOWN)) {
-    toggleBookmark();
+    // LB + Side Down = Skip -10 pages
+    currentPage = (currentPage >= 10) ? currentPage - 10 : 0;
     if (mappedInput.isPressedRaw(HalGPIO::BTN_BACK)) mappedInput.consumeButtonRaw(HalGPIO::BTN_BACK);
     if (mappedInput.isPressedRaw(HalGPIO::BTN_CONFIRM)) mappedInput.consumeButtonRaw(HalGPIO::BTN_CONFIRM);
     mappedInput.consumeButtonRaw(HalGPIO::BTN_DOWN);
+    requestUpdate();
     return;
   }
   if (lbPressed && mappedInput.wasPressedRaw(HalGPIO::BTN_UP)) {
-    nextBookmark();
+    // LB + Side Up = Skip +10 pages
+    currentPage += 10;
+    if (currentPage >= xtc->getPageCount()) currentPage = xtc->getPageCount() - 1;
     if (mappedInput.isPressedRaw(HalGPIO::BTN_BACK)) mappedInput.consumeButtonRaw(HalGPIO::BTN_BACK);
     if (mappedInput.isPressedRaw(HalGPIO::BTN_CONFIRM)) mappedInput.consumeButtonRaw(HalGPIO::BTN_CONFIRM);
     mappedInput.consumeButtonRaw(HalGPIO::BTN_UP);
+    requestUpdate();
     return;
   }
   if (rbPressed && mappedInput.wasPressedRaw(HalGPIO::BTN_UP)) {
@@ -186,9 +191,13 @@ void XtcReaderActivity::loop() {
   }
 
   int skipAmount = 0;
-  if (sideUpLong)          skipAmount = 10;
-  else if (sideDownLong)   skipAmount = -10;
-  else if (frontRightShort || sideUpShort)  skipAmount = 1;
+  if (sideUpLong) {
+    nextBookmark();
+    return;
+  } else if (sideDownLong) {
+    toggleBookmark();
+    return;
+  } else if (frontRightShort || sideUpShort)  skipAmount = 1;
   else if (frontLeftShort  || sideDownShort) skipAmount = -1;
 
   if (skipAmount == 0) return;

@@ -31,12 +31,14 @@ The 4 front physical buttons are grouped into two logical clusters. The **Remap 
 
 ### 2. Reader Layout (Epub / XTC / Txt)
 
-| Button                  | Short Press   | Long Press (≥ 600ms) |
-| ----------------------- | ------------- | -------------------- |
-| **Side Up**             | Next page     | +10 pages            |
-| **Side Down**           | Previous page | −10 pages            |
-| **Front-Left Cluster**  | Previous page | Exit to Home         |
-| **Front-Right Cluster** | Next page     | Open Floating Menu   |
+| Button / Combination          | Short Press    | Long Press (≥ 600ms) |
+| ----------------------------- | -------------- | -------------------- |
+| **Side Up**                   | Next page      | **Next Bookmark**    |
+| **Side Down**                 | Previous page  | **Bookmark On/Off**  |
+| **Front-Left Cluster**        | Previous page  | Exit to Home         |
+| **Front-Right Cluster**       | Next page      | Open Floating Menu   |
+| **LB Cluster + Side Buttons** | **± 10 Pages** | -                    |
+| **RB Cluster + Side Buttons** | **± 10% Jump** | -                    |
 
 ### 3. Home Screen & Navigation
 
