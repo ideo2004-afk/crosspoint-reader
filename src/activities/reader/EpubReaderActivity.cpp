@@ -831,11 +831,24 @@ void EpubReaderActivity::renderStatusBar(const int orientedMarginRight, const in
   // Track (1px)
   renderer.fillRect(orientedMarginLeft, y + 2, viewportWidth, 1, textColor);
 
-  // Progress (3px)
-  if (section->pageCount > 0) {
-    int progressWidth = (static_cast<long>(section->currentPage + 1) * viewportWidth) / section->pageCount;
+  // Book Progress (3px)
+  float bookProgress = 0.0f;
+  if (epub && epub->getBookSize() > 0 && section && section->pageCount > 0) {
+    const float chapterProgress = static_cast<float>(section->currentPage) / static_cast<float>(section->pageCount);
+    bookProgress = epub->calculateProgress(currentSpineIndex, chapterProgress);
+    
+    int progressWidth = static_cast<int>(bookProgress * viewportWidth);
     if (progressWidth > viewportWidth) progressWidth = viewportWidth;
     renderer.fillRect(orientedMarginLeft, y, progressWidth, 3, textColor);
+
+    // Draw Bookmark Markers (2x2px)
+    for (const auto& b : bookmarks) {
+      int markerX = orientedMarginLeft + static_cast<int>(b.progress * viewportWidth);
+      if (markerX >= orientedMarginLeft && markerX < orientedMarginLeft + viewportWidth) {
+        // Draw 2x2 square overlapping with the track for a joined look
+        renderer.fillRect(markerX - 1, y, 2, 2, textColor);
+      }
+    }
 
     // Draw page number (small text, right aligned within viewport above track)
     char pageBuf[16];
@@ -863,12 +876,19 @@ void EpubReaderActivity::saveBookmarks() const {
   FsFile f;
   if (Storage.openFileForWrite("ERS", epub->getCachePath() + "/bookmarks.bin", f)) {
     for (const auto& b : bookmarks) {
-      uint8_t data[4];
+      uint8_t data[12]; // Increased to 12 bytes: 2+2+4+4(padding/ext) -> actually 2+2+4 = 8? Let's use 12 for safety/future
       data[0] = b.spineIndex & 0xFF;
       data[1] = (b.spineIndex >> 8) & 0xFF;
       data[2] = b.pageIndex & 0xFF;
       data[3] = (b.pageIndex >> 8) & 0xFF;
-      f.write(data, 4);
+      
+      // Store float progress (assuming IEEE 754 4-byte float)
+      memcpy(&data[4], &b.progress, 4);
+      
+      // Zero out last 4 bytes for padding/future
+      memset(&data[8], 0, 4);
+      
+      f.write(data, 12);
     }
     f.close();
   }
@@ -878,11 +898,31 @@ void EpubReaderActivity::loadBookmarks() {
   bookmarks.clear();
   FsFile f;
   if (Storage.openFileForRead("ERS", epub->getCachePath() + "/bookmarks.bin", f)) {
-    uint8_t data[4];
-    while (f.read(data, 4) == 4) {
-      uint16_t spine = data[0] | (data[1] << 8);
-      uint16_t page = data[2] | (data[3] << 8);
-      bookmarks.push_back({spine, page});
+    const size_t fileSize = f.size();
+    if (fileSize % 12 == 0) {
+      // New format (12 bytes)
+      uint8_t data[12];
+      while (f.read(data, 12) == 12) {
+        Bookmark b;
+        b.spineIndex = data[0] | (data[1] << 8);
+        b.pageIndex = data[2] | (data[3] << 8);
+        memcpy(&b.progress, &data[4], 4);
+        bookmarks.push_back(b);
+      }
+    } else if (fileSize % 4 == 0) {
+      // Legacy format (4 bytes)
+      uint8_t data[4];
+      while (f.read(data, 4) == 4) {
+        Bookmark b;
+        b.spineIndex = data[0] | (data[1] << 8);
+        b.pageIndex = data[2] | (data[3] << 8);
+        b.progress = 0.0f; // Will be updated on toggle or render if needed? 
+        // Actually, calculate best estimate for legacy
+        if (epub) {
+          b.progress = epub->calculateProgress(b.spineIndex, 0.0f);
+        }
+        bookmarks.push_back(b);
+      }
     }
     f.close();
     std::sort(bookmarks.begin(), bookmarks.end(), [](const Bookmark& a, const Bookmark& b) {
@@ -894,7 +934,14 @@ void EpubReaderActivity::loadBookmarks() {
 
 void EpubReaderActivity::toggleBookmark() {
   if (!section) return;
-  Bookmark current = { (uint16_t)currentSpineIndex, (uint16_t)section->currentPage };
+  
+  float bookProgress = 0.0f;
+  if (epub && section->pageCount > 0) {
+    const float chapterProgress = static_cast<float>(section->currentPage) / static_cast<float>(section->pageCount);
+    bookProgress = epub->calculateProgress(currentSpineIndex, chapterProgress);
+  }
+
+  Bookmark current = { (uint16_t)currentSpineIndex, (uint16_t)section->currentPage, bookProgress };
   auto it = std::find(bookmarks.begin(), bookmarks.end(), current);
   if (it != bookmarks.end()) {
     bookmarks.erase(it);

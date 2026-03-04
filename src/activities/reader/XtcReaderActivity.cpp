@@ -507,6 +507,15 @@ void XtcReaderActivity::renderStatusBar() const {
     if (progressWidth > availableWidth) progressWidth = availableWidth;
     renderer.fillRect(sideMargin, y, progressWidth, 3, textColor);
 
+    // Draw Bookmark Markers (2x2px)
+    for (uint32_t b : bookmarks) {
+      int markerX = sideMargin + (static_cast<long>(b + 1) * availableWidth) / totalPages;
+      if (markerX >= sideMargin && markerX < sideMargin + availableWidth) {
+        // Draw 2x2 square overlapping with the track for a joined look
+        renderer.fillRect(markerX - 1, y, 2, 2, textColor);
+      }
+    }
+
     // Draw page number (small text, right aligned above track)
     char pageBuf[16];
     snprintf(pageBuf, sizeof(pageBuf), "%lu", (unsigned long)(currentPage + 1));

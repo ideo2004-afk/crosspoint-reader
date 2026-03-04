@@ -32,6 +32,7 @@ class EpubReaderActivity final : public ActivityWithSubactivity {
   struct Bookmark {
     uint16_t spineIndex;
     uint16_t pageIndex;
+    float progress;
     bool operator==(const Bookmark& other) const {
       return spineIndex == other.spineIndex && pageIndex == other.pageIndex;
     }
