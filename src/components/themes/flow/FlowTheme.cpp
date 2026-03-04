@@ -21,6 +21,25 @@ constexpr int sideCoverHeight = 200;
 constexpr int centerCoverWidth = 220;
 constexpr int centerCoverHeight = 294;
 constexpr int hPadding = 10;
+constexpr int bookCornerRadius = 12;
+
+// Helper to "cut" corners of a rectangular area by erasing pixels outside the radius.
+// This simulates rounded corners for bitmaps (which are always rectangular).
+void cutRoundedCorners(GfxRenderer& renderer, int x, int y, int w, int h, int r) {
+    const int rSq = r * r;
+    for (int dy = 0; dy < r; dy++) {
+        for (int dx = 0; dx < r; dx++) {
+            // Distance from center of corner arc (r, r)
+            const int distSq = (r - dx) * (r - dx) + (r - dy) * (r - dy);
+            if (distSq > rSq) {
+                renderer.drawPixel(x + dx, y + dy, false);                      // Top-left
+                renderer.drawPixel(x + w - 1 - dx, y + dy, false);              // Top-right
+                renderer.drawPixel(x + w - 1 - dx, y + h - 1 - dy, false);      // Bottom-right
+                renderer.drawPixel(x + dx, y + h - 1 - dy, false);              // Bottom-left
+            }
+        }
+    }
+}
 }  // namespace
 
 void FlowTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std::vector<RecentBook>& recentBooks,
@@ -64,9 +83,10 @@ void FlowTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
         
         if (!success) {
             renderer.fillRect(drawX, drawY, w, h, false); // Clear
-            renderer.drawRect(drawX, drawY, w, h, true);
+            renderer.drawRoundedRect(drawX, drawY, w, h, 1, bookCornerRadius, true);
         } else {
-            renderer.drawRect(drawX, drawY, w, h, true);
+            cutRoundedCorners(renderer, drawX, drawY, w, h, bookCornerRadius);
+            renderer.drawRoundedRect(drawX, drawY, w, h, 1, bookCornerRadius, true);
         }
     };
 
@@ -114,15 +134,19 @@ void FlowTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
             file.close();
         }
         
-        renderer.drawRect(drawX, drawY, centerCoverWidth, centerCoverHeight, true);
+        if (success) {
+            cutRoundedCorners(renderer, drawX, drawY, centerCoverWidth, centerCoverHeight, bookCornerRadius);
+        }
+        
+        renderer.drawRoundedRect(drawX, drawY, centerCoverWidth, centerCoverHeight, 1, bookCornerRadius, true);
         if (!success) {
-             renderer.fillRect(drawX, drawY + centerCoverHeight/3, centerCoverWidth, 2*centerCoverHeight/3, true);
+             renderer.fillRoundedRect(drawX, drawY + centerCoverHeight/3, centerCoverWidth, 2*centerCoverHeight/3, bookCornerRadius, false, false, true, true, Color::Black);
              renderer.drawIcon(CoverIcon, drawX + centerCoverWidth/2 - 16, drawY + centerCoverHeight/2 - 16, 32, 32);
         }
 
         if (hasSelection) {
             // Highlight border if selected (Book focus)
-            renderer.drawRect(drawX - 2, drawY - 2, centerCoverWidth + 4, centerCoverHeight + 4, 3, true);
+            renderer.drawRoundedRect(drawX - 2, drawY - 2, centerCoverWidth + 4, centerCoverHeight + 4, 3, bookCornerRadius + 2, true);
         }
 
         // Draw File Name below center cover

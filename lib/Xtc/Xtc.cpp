@@ -454,7 +454,7 @@ bool Xtc::generateThumbBmp(int height) const {
   // Calculate scaling to fit content into target thumb size while preserving aspect ratio
   float scaleX = static_cast<float>(THUMB_TARGET_WIDTH) / contentWidth;
   float scaleY = static_cast<float>(THUMB_TARGET_HEIGHT) / contentHeight;
-  float scale = std::min(scaleX, scaleY);
+  float scale = std::max(scaleX, scaleY);
 
   uint16_t scaledWidth = static_cast<uint16_t>(contentWidth * scale);
   uint16_t scaledHeight = static_cast<uint16_t>(contentHeight * scale);
@@ -516,16 +516,26 @@ bool Xtc::generateThumbBmp(int height) const {
     // Fill row with white
     memset(rowBuffer, 0xFF, rowSize);
 
-    // Only process content if within scaled area
-    if (dstY >= offsetY && dstY < offsetY + scaledHeight) {
-      uint32_t srcYOffset = dstY - offsetY;
-      uint32_t srcYStart = contentYStart + ((srcYOffset * scaleInv_fp) >> 16);
-      uint32_t srcYEnd = contentYStart + (((srcYOffset + 1) * scaleInv_fp) >> 16);
+    // Process all destination pixels. OffsetX/Y may be negative due to "Fill" scale.
+    uint32_t srcYOffset = dstY - offsetY;
+    int32_t srcYStart_fixed = (int32_t)contentYStart + ((srcYOffset * (int32_t)scaleInv_fp) >> 16);
+    int32_t srcYEnd_fixed = (int32_t)contentYStart + (((srcYOffset + 1) * (int32_t)scaleInv_fp) >> 16);
+
+    // Only process if this source row range is within page bounds
+    if (srcYEnd_fixed > 0 && srcYStart_fixed < (int32_t)pageInfo.height) {
+      uint32_t srcYStart = std::max((int32_t)0, srcYStart_fixed);
+      uint32_t srcYEnd = std::min((uint32_t)pageInfo.height, (uint32_t)std::max((int32_t)0, srcYEnd_fixed));
       
-      for (int32_t dstX = offsetX; dstX < offsetX + scaledWidth; dstX++) {
+      for (int32_t dstX = 0; dstX < THUMB_TARGET_WIDTH; dstX++) {
         uint32_t srcXOffset = dstX - offsetX;
-        uint32_t srcXStart = contentXStart + ((srcXOffset * scaleInv_fp) >> 16);
-        uint32_t srcXEnd = contentXStart + (((srcXOffset + 1) * scaleInv_fp) >> 16);
+        int32_t srcXStart_fixed = (int32_t)contentXStart + ((srcXOffset * (int32_t)scaleInv_fp) >> 16);
+        int32_t srcXEnd_fixed = (int32_t)contentXStart + (((srcXOffset + 1) * (int32_t)scaleInv_fp) >> 16);
+
+        // Skip if outside source bounds (for robustness, though offsetX/offsetY usually handle this)
+        if (srcXEnd_fixed <= 0 || srcXStart_fixed >= (int32_t)pageInfo.width) continue;
+
+        uint32_t srcXStart = std::max((int32_t)0, srcXStart_fixed);
+        uint32_t srcXEnd = std::min((uint32_t)pageInfo.width, (uint32_t)std::max((int32_t)0, srcXEnd_fixed));
 
         uint32_t graySum = 0, totalCount = 0;
         for (uint32_t srcY = srcYStart; srcY < srcYEnd && srcY < pageInfo.height; srcY++) {

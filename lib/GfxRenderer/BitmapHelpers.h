@@ -51,7 +51,7 @@ class Atkinson1BitDitherer {
     // Quantize to 2 levels (1-bit): 0 = black, 1 = white
     uint8_t quantized;
     int quantizedValue;
-    if (adjusted < 128) {
+    if (adjusted < 150) {
       quantized = 0;
       quantizedValue = 0;
     } else {

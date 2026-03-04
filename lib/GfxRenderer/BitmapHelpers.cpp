@@ -8,7 +8,7 @@
 // Brightness/Contrast adjustments:
 constexpr bool USE_BRIGHTNESS = true;        // true: apply brightness/gamma adjustments
 constexpr int BRIGHTNESS_BOOST = 0;         // Brightness offset (0-50)
-constexpr bool GAMMA_CORRECTION = false;     // Gamma curve (brightens midtones)
+constexpr bool GAMMA_CORRECTION = true;     // Gamma curve (brightens midtones)
 constexpr float CONTRAST_FACTOR = 1.5f;      // Contrast multiplier (1.0 = no change, >1 = more contrast)
 constexpr bool USE_NOISE_DITHERING = false;  // Hash-based noise dithering
 
