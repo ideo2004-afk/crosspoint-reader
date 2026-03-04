@@ -314,10 +314,10 @@ bool JpegToBmpConverter::jpegFileToBmpStreamInternal(FsFile& jpegFile, Print& bm
   // Use OUTPUT dimensions for dithering (after prescaling)
   AtkinsonDitherer* atkinsonDitherer = nullptr;
   FloydSteinbergDitherer* fsDitherer = nullptr;
-  Atkinson1BitDitherer* atkinson1BitDitherer = nullptr;
+  FloydSteinberg1BitDitherer* fs1BitDitherer = nullptr;
 
   if (oneBit) {
-    atkinson1BitDitherer = new Atkinson1BitDitherer(outWidth);
+    fs1BitDitherer = new FloydSteinberg1BitDitherer(outWidth);
   } else if (!USE_8BIT_OUTPUT) {
     if (USE_ATKINSON) {
       atkinsonDitherer = new AtkinsonDitherer(outWidth);
@@ -413,13 +413,13 @@ bool JpegToBmpConverter::jpegFileToBmpStreamInternal(FsFile& jpegFile, Print& bm
           for (int x = 0; x < outWidth; x++) {
             const uint8_t gray = mcuRowBuffer[bufferY * imageInfo.m_width + x];
             const uint8_t bit =
-                atkinson1BitDitherer ? atkinson1BitDitherer->processPixel(gray, x) : quantize1bit(gray, x, y);
+                fs1BitDitherer ? fs1BitDitherer->processPixel(gray, x) : quantize1bit(gray, x, y);
             // Pack 1-bit value: MSB first, 8 pixels per byte
             const int byteIndex = x / 8;
             const int bitOffset = 7 - (x % 8);
             rowBuffer[byteIndex] |= (bit << bitOffset);
           }
-          if (atkinson1BitDitherer) atkinson1BitDitherer->nextRow();
+          if (fs1BitDitherer) fs1BitDitherer->nextRow();
         } else {
           // 2-bit output
           for (int x = 0; x < outWidth; x++) {
@@ -504,12 +504,12 @@ bool JpegToBmpConverter::jpegFileToBmpStreamInternal(FsFile& jpegFile, Print& bm
               int finalX = x + offsetX;
               if (finalX < 0 || finalX >= finalWidth) continue;
 
-              const uint8_t bit = atkinson1BitDitherer ? atkinson1BitDitherer->processPixel(gray, x)
-                                                       : quantize1bit(gray, x, currentOutY);
+              const uint8_t bit = fs1BitDitherer ? fs1BitDitherer->processPixel(gray, x)
+                                                  : quantize1bit(gray, x, currentOutY);
               // Pack 1-bit value: MSB first, 8 pixels per byte
               if (bit == 0) rowBuffer[finalX / 8] &= ~(1 << (7 - (finalX % 8)));
             }
-            if (atkinson1BitDitherer) atkinson1BitDitherer->nextRow();
+            if (fs1BitDitherer) fs1BitDitherer->nextRow();
           } else {
             // 2-bit output
             for (int x = 0; x < outWidth; x++) {
@@ -575,8 +575,8 @@ bool JpegToBmpConverter::jpegFileToBmpStreamInternal(FsFile& jpegFile, Print& bm
   if (fsDitherer) {
     delete fsDitherer;
   }
-  if (atkinson1BitDitherer) {
-    delete atkinson1BitDitherer;
+  if (fs1BitDitherer) {
+    delete fs1BitDitherer;
   }
   free(mcuRowBuffer);
   free(rowBuffer);

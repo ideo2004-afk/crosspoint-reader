@@ -510,7 +510,7 @@ bool Xtc::generateThumbBmp(int height) const {
 
   uint32_t scaleInv_fp = static_cast<uint32_t>(65536.0f / scale);
 
-  Atkinson1BitDitherer ditherer(THUMB_TARGET_WIDTH);
+  FloydSteinberg1BitDitherer ditherer(THUMB_TARGET_WIDTH);
 
   for (int32_t dstY = 0; dstY < THUMB_TARGET_HEIGHT; dstY++) {
     // Fill row with white

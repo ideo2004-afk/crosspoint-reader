@@ -318,3 +318,73 @@ class FloydSteinbergDitherer {
   int16_t* errorCurRow;
   int16_t* errorNextRow;
 };
+
+// Floyd-Steinberg 1-bit dithering - produces halftone-like dot patterns
+// Matches the algorithm used by the XTC converter (dither.js) for consistent quality.
+// Error distribution pattern:
+//       X   7/16
+// 3/16 5/16 1/16
+class FloydSteinberg1BitDitherer {
+ public:
+  explicit FloydSteinberg1BitDitherer(int width) : width(width) {
+    errorCurRow = new int16_t[width + 2]();
+    errorNextRow = new int16_t[width + 2]();
+  }
+
+  ~FloydSteinberg1BitDitherer() {
+    delete[] errorCurRow;
+    delete[] errorNextRow;
+  }
+
+  FloydSteinberg1BitDitherer(const FloydSteinberg1BitDitherer&) = delete;
+  FloydSteinberg1BitDitherer& operator=(const FloydSteinberg1BitDitherer&) = delete;
+
+  uint8_t processPixel(int gray, int x) {
+    // Add accumulated error
+    int adjusted = gray + errorCurRow[x + 1];
+    if (adjusted < 0) adjusted = 0;
+    if (adjusted > 255) adjusted = 255;
+
+    // Quantize to 2 levels (1-bit): threshold at 128 (same as XTC converter)
+    uint8_t quantized;
+    int quantizedValue;
+    if (adjusted < 128) {
+      quantized = 0;
+      quantizedValue = 0;
+    } else {
+      quantized = 1;
+      quantizedValue = 255;
+    }
+
+    // Calculate error and distribute 100% to neighbors
+    int error = adjusted - quantizedValue;
+
+    // Right: 7/16
+    errorCurRow[x + 2] += (error * 7) >> 4;
+    // Bottom-left: 3/16
+    errorNextRow[x] += (error * 3) >> 4;
+    // Bottom: 5/16
+    errorNextRow[x + 1] += (error * 5) >> 4;
+    // Bottom-right: 1/16
+    errorNextRow[x + 2] += error >> 4;
+
+    return quantized;
+  }
+
+  void nextRow() {
+    int16_t* temp = errorCurRow;
+    errorCurRow = errorNextRow;
+    errorNextRow = temp;
+    memset(errorNextRow, 0, (width + 2) * sizeof(int16_t));
+  }
+
+  void reset() {
+    memset(errorCurRow, 0, (width + 2) * sizeof(int16_t));
+    memset(errorNextRow, 0, (width + 2) * sizeof(int16_t));
+  }
+
+ private:
+  int width;
+  int16_t* errorCurRow;
+  int16_t* errorNextRow;
+};
