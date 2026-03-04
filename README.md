@@ -3,23 +3,24 @@
 Firmware for the **Xteink X4** e-paper display reader (unaffiliated with Xteink).
 Built using **PlatformIO** and targeting the **ESP32-C3** microcontroller.
 
-CrossPoint Reader is a purpose-built firmware designed to be a drop-in, fully open-source replacement for the official 
+CrossPoint Reader is a purpose-built firmware designed to be a drop-in, fully open-source replacement for the official
 Xteink firmware. It aims to match or improve upon the standard EPUB reading experience.
 
 ![](./docs/images/cover.jpg)
 
 ## Motivation
 
-E-paper devices are fantastic for reading, but most commercially available readers are closed systems with limited 
+E-paper devices are fantastic for reading, but most commercially available readers are closed systems with limited
 customisation. The **Xteink X4** is an affordable, e-paper device, however the official firmware remains closed.
 CrossPoint exists partly as a fun side-project and partly to open up the ecosystem and truely unlock the device's
 potential.
 
 CrossPoint Reader aims to:
-* Provide a **fully open-source alternative** to the official firmware.
-* Offer a **document reader** capable of handling EPUB content on constrained hardware.
-* Support **customisable font, layout, and display** options.
-* Run purely on the **Xteink X4 hardware**.
+
+- Provide a **fully open-source alternative** to the official firmware.
+- Offer a **document reader** capable of handling EPUB content on constrained hardware.
+- Support **customisable font, layout, and display** options.
+- Run purely on the **Xteink X4 hardware**.
 
 This project is **not affiliated with Xteink**; it's built as a community project.
 
@@ -37,13 +38,15 @@ This project is **not affiliated with Xteink**; it's built as a community projec
 - [x] Wifi book upload
 - [x] Wifi OTA updates
 - [x] Configurable font, layout, and display options
+  - [x] Customisable Themes (e.g., Flow Theme with rounded covers)
+  - [x] Enhanced 1-bit image rendering (Floyd-Steinberg dithering, contrast & gamma tuning)
   - [ ] User provided fonts
   - [ ] Full UTF support
 - [x] Screen rotation
 
 Multi-language support: Read EPUBs in various languages, including English, Spanish, French, German, Italian, Portuguese, Russian, Ukrainian, Polish, Swedish, Norwegian, [and more](./USER_GUIDE.md#supported-languages).
 
-See [the user guide](./USER_GUIDE.md) for instructions on operating CrossPoint. 
+See [the user guide](./USER_GUIDE.md) for instructions on operating CrossPoint.
 
 For more details about the scope of the project, see the [SCOPE.md](SCOPE.md) document.
 
@@ -74,10 +77,10 @@ See [Development](#development) below.
 
 ### Prerequisites
 
-* **PlatformIO Core** (`pio`) or **VS Code + PlatformIO IDE**
-* Python 3.8+
-* USB-C cable for flashing the ESP32-C3
-* Xteink X4
+- **PlatformIO Core** (`pio`) or **VS Code + PlatformIO IDE**
+- Python 3.8+
+- USB-C cable for flashing the ESP32-C3
+- Xteink X4
 
 ### Checking out the code
 
@@ -97,6 +100,7 @@ Connect your Xteink X4 to your computer via USB-C and run the following command.
 ```sh
 pio run --target upload
 ```
+
 ### Debugging
 
 After flashing the new features, it’s recommended to capture detailed logs from the serial port.
@@ -106,7 +110,9 @@ First, make sure all required Python packages are installed:
 ```python
 python3 -m pip install pyserial colorama matplotlib
 ```
+
 after that run the script:
+
 ```sh
 # For Linux
 # This was tested on Debian and should work on most Linux systems.
@@ -115,6 +121,7 @@ python3 scripts/debugging_monitor.py
 # For macOS
 python3 scripts/debugging_monitor.py /dev/cu.usbmodem2101
 ```
+
 Minor adjustments may be required for Windows.
 
 ## Internals
@@ -125,9 +132,8 @@ on this constraint.
 
 ### Data caching
 
-The first time chapters of a book are loaded, they are cached to the SD card. Subsequent loads are served from the 
+The first time chapters of a book are loaded, they are cached to the SD card. Subsequent loads are served from the
 cache. This cache directory exists at `.crosspoint` on the SD card. The structure is as follows:
-
 
 ```
 .crosspoint/
@@ -143,7 +149,7 @@ cache. This cache directory exists at `.crosspoint` on the SD card. The structur
 └── epub_189013891/
 ```
 
-Deleting the `.crosspoint` directory will clear the entire cache. 
+Deleting the `.crosspoint` directory will clear the entire cache.
 
 Due the way it's currently implemented, the cache is not automatically cleared when a book is deleted and moving a book
 file will use a new cache directory, resetting the reading progress.
@@ -159,7 +165,7 @@ If you are new to the codebase, start with the [contributing docs](./docs/contri
 If you're looking for a way to help out, take a look at the [ideas discussion board](https://github.com/crosspoint-reader/crosspoint-reader/discussions/categories/ideas).
 If there's something there you'd like to work on, leave a comment so that we can avoid duplicated effort.
 
-Everyone here is a volunteer, so please be respectful and patient. For more details on our goverance and community 
+Everyone here is a volunteer, so please be respectful and patient. For more details on our goverance and community
 principles, please see [GOVERNANCE.md](GOVERNANCE.md).
 
 ### To submit a contribution:
