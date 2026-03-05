@@ -50,6 +50,7 @@ This project is **not affiliated with Xteink**; it's built as a community projec
 - [x] High-performance XTC Reader
   - [x] **Memory Breakthrough**: 50% reduction in page table memory, enabling stable reading of 4000+ page books on constrained hardware.
   - [x] **Instant Start**: Optimized refresh logic for near-instant transitions when entering books.
+- [x] **Snappy Input Response**: Reduced input cooldown (200ms) and long-press thresholds (350ms) for a more responsive, high-performance feel.
 - [x] Configurable font, layout, and display options
   - [x] Customisable Themes (e.g., Flow Theme with rounded covers)
   - [x] Enhanced 1-bit image rendering (Floyd-Steinberg dithering, contrast & gamma tuning)
