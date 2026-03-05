@@ -49,7 +49,6 @@ class GfxRenderer {
   FontDecompressor* fontDecompressor = nullptr;
   void renderChar(const EpdFontFamily& fontFamily, uint32_t cp, int* x, int* y, Color color,
                   EpdFontFamily::Style style) const;
-  void freeBwBufferChunks();
   template <Color color>
   void drawPixelDither(int x, int y) const;
   template <Color color>
@@ -73,6 +72,7 @@ class GfxRenderer {
   void clearFontCache() {
     if (fontDecompressor) fontDecompressor->clearCache();
   }
+  void freeBwBufferChunks();
 
   // Orientation control (affects logical width/height and coordinate transforms)
   void setOrientation(const Orientation o) { orientation = o; }

@@ -94,9 +94,9 @@ void XtcReaderActivity::loop() {
     } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Confirm)) {
       // Execute Menu Action (Right Cluster)
       inMenu = false;
-      renderer.restoreBwBuffer(true);
+      renderer.freeBwBufferChunks();
       if (menuSelectedIndex == 0) { // Resume
-        requestUpdate();
+        renderPage();
       } else if (menuSelectedIndex == 1) { // Next 10%
         jumpPercent(10);
       } else if (menuSelectedIndex == 2) { // Back 10%
@@ -104,28 +104,27 @@ void XtcReaderActivity::loop() {
       } else if (menuSelectedIndex == 3) { // Dark Mode Toggle
         SETTINGS.darkMode = !SETTINGS.darkMode;
         SETTINGS.saveToFile();
-        requestUpdate();
+        renderPage();
       } else if (menuSelectedIndex == 4) { // Screenshot
         pendingScreenshot = true;
-        requestUpdate();
+        renderPage();
       } else if (menuSelectedIndex == 5) { // Exit
-        renderer.restoreBwBuffer(true);
         onGoHome();
       }
       return;
     } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Back)) {
       // Resume/Cancel (Left Cluster)
       inMenu = false;
-      renderer.restoreBwBuffer(true);
-      requestUpdate();
+      renderer.freeBwBufferChunks();
+      renderPage();
       return;
     } else if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_BACK, longPressMs) || 
                mappedInput.wasLongPressedRaw(HalGPIO::BTN_CONFIRM, longPressMs) ||
                mappedInput.wasLongPressedRaw(HalGPIO::BTN_LEFT, longPressMs) ||
                mappedInput.wasLongPressedRaw(HalGPIO::BTN_RIGHT, longPressMs)) {
       inMenu = false;
-      renderer.restoreBwBuffer(true);
-      requestUpdate();
+      renderer.freeBwBufferChunks();
+      renderPage();
       return;
     }
     return;
@@ -145,6 +144,8 @@ void XtcReaderActivity::loop() {
   // Front RIGHT: short=next, long=menu (snappy)
   if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_LEFT, 500) || 
       mappedInput.wasLongPressedRaw(HalGPIO::BTN_RIGHT, 500)) {
+    // Force a fresh render without display to make sure BW buffer in renderer is current
+    renderPage();
     renderer.storeBwBuffer();
     inMenu = true;
     menuSelectedIndex = 0;
