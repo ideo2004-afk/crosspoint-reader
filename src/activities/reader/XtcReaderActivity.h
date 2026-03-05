@@ -28,7 +28,7 @@ class XtcReaderActivity final : public ActivityWithSubactivity {
   size_t pageBufferCapacity = 0;
 
   std::vector<uint32_t> bookmarks;
-  void renderPage();
+  void renderPage(bool triggerDisplay = true);
   void renderStatusBar() const;
   void renderBookmarkIndicator() const;
   void renderMenu() const;

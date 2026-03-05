@@ -59,7 +59,6 @@ void XtcReaderActivity::onEnter() {
 }
 
 void XtcReaderActivity::onExit() {
-  renderer.restoreBwBuffer(true); // Safety cleanup
   ActivityWithSubactivity::onExit();
 
   if (sessionStartMillis > 0 && xtc) {
@@ -94,9 +93,8 @@ void XtcReaderActivity::loop() {
     } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Confirm)) {
       // Execute Menu Action (Right Cluster)
       inMenu = false;
-      renderer.freeBwBufferChunks();
       if (menuSelectedIndex == 0) { // Resume
-        renderPage();
+        requestUpdate();
       } else if (menuSelectedIndex == 1) { // Next 10%
         jumpPercent(10);
       } else if (menuSelectedIndex == 2) { // Back 10%
@@ -104,10 +102,10 @@ void XtcReaderActivity::loop() {
       } else if (menuSelectedIndex == 3) { // Dark Mode Toggle
         SETTINGS.darkMode = !SETTINGS.darkMode;
         SETTINGS.saveToFile();
-        renderPage();
+        requestUpdate();
       } else if (menuSelectedIndex == 4) { // Screenshot
         pendingScreenshot = true;
-        renderPage();
+        requestUpdate();
       } else if (menuSelectedIndex == 5) { // Exit
         onGoHome();
       }
@@ -115,16 +113,14 @@ void XtcReaderActivity::loop() {
     } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Back)) {
       // Resume/Cancel (Left Cluster)
       inMenu = false;
-      renderer.freeBwBufferChunks();
-      renderPage();
+      requestUpdate();
       return;
     } else if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_BACK, longPressMs) || 
                mappedInput.wasLongPressedRaw(HalGPIO::BTN_CONFIRM, longPressMs) ||
                mappedInput.wasLongPressedRaw(HalGPIO::BTN_LEFT, longPressMs) ||
                mappedInput.wasLongPressedRaw(HalGPIO::BTN_RIGHT, longPressMs)) {
       inMenu = false;
-      renderer.freeBwBufferChunks();
-      renderPage();
+      requestUpdate();
       return;
     }
     return;
@@ -144,9 +140,6 @@ void XtcReaderActivity::loop() {
   // Front RIGHT: short=next, long=menu (snappy)
   if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_LEFT, 500) || 
       mappedInput.wasLongPressedRaw(HalGPIO::BTN_RIGHT, 500)) {
-    // Force a fresh render without display to make sure BW buffer in renderer is current
-    renderPage();
-    renderer.storeBwBuffer();
     inMenu = true;
     menuSelectedIndex = 0;
     requestUpdate();
@@ -259,8 +252,9 @@ void XtcReaderActivity::render(Activity::RenderLock&&) {
 }
 
 void XtcReaderActivity::renderMenu() const {
-  // Restore background from buffer (keep chunks in memory for next selection move)
-  renderer.restoreBwBuffer(false);
+  // Composite page background WITHOUT triggering display or grayscale passes
+  // This ensures the background is clean and correctly thresholded, and eliminates ghosting.
+  const_cast<XtcReaderActivity*>(this)->renderPage(false);
 
   const int sw = renderer.getScreenWidth();
   const int sh = renderer.getScreenHeight();
@@ -291,7 +285,7 @@ void XtcReaderActivity::renderMenu() const {
   renderer.displayBuffer();
 }
 
-void XtcReaderActivity::renderPage() {
+void XtcReaderActivity::renderPage(bool triggerDisplay) {
   const uint16_t pageWidth = xtc->getPageWidth();
   const uint16_t pageHeight = xtc->getPageHeight();
   const uint8_t bitDepth = xtc->getBitDepth();
@@ -388,12 +382,14 @@ void XtcReaderActivity::renderPage() {
     }
 
     // Display BW with conditional refresh based on pagesUntilFullRefresh
-    if (pagesUntilFullRefresh <= 1) {
-      renderer.displayBuffer(HalDisplay::HALF_REFRESH);
-      pagesUntilFullRefresh = SETTINGS.getRefreshFrequency();
-    } else {
-      renderer.displayBuffer();
-      pagesUntilFullRefresh--;
+    if (triggerDisplay) {
+      if (pagesUntilFullRefresh <= 1) {
+        renderer.displayBuffer(HalDisplay::HALF_REFRESH);
+        pagesUntilFullRefresh = SETTINGS.getRefreshFrequency();
+      } else {
+        renderer.displayBuffer();
+        pagesUntilFullRefresh--;
+      }
     }
 
     // Pass 2 & 3: Skip grayscale overlay in Dark Mode to ensure high contrast
@@ -419,7 +415,9 @@ void XtcReaderActivity::renderPage() {
         }
       }
       renderer.copyGrayscaleMsbBuffers();
-      renderer.displayGrayBuffer();
+      if (triggerDisplay) {
+        renderer.displayGrayBuffer();
+      }
 
       // Pass 4: Re-render BW to framebuffer (RESTORE for next frame)
       // We ONLY do this in normal mode because in Dark Mode, Pass 1 already left the correct inverted image in the buffer.
@@ -431,7 +429,9 @@ void XtcReaderActivity::renderPage() {
           }
         }
       }
-      renderer.cleanupGrayscaleWithFrameBuffer();
+      if (triggerDisplay) {
+        renderer.cleanupGrayscaleWithFrameBuffer();
+      }
     } else {
         // In Dark Mode, we don't need to re-render. Pass 1 already drew the inverted page.
         // But we MUST re-render the status bar so it appears on the PHYSICAL screen if it wasn't part of the BW pass.
@@ -443,7 +443,7 @@ void XtcReaderActivity::renderPage() {
     
     // In Dark Mode, because we didn't call displayGrayBuffer, we might need a final displayBuffer 
     // to ensure the Status Bar (rendered AFTER Pass 1's displayBuffer) is actually shown.
-    if (SETTINGS.darkMode) {
+    if (triggerDisplay && SETTINGS.darkMode) {
         renderer.displayBuffer(HalDisplay::FAST_REFRESH);
     }
 
@@ -483,12 +483,14 @@ void XtcReaderActivity::renderPage() {
   renderStatusBar();
 
   // Display with appropriate refresh
-  if (pagesUntilFullRefresh <= 1) {
-    renderer.displayBuffer(HalDisplay::HALF_REFRESH);
-    pagesUntilFullRefresh = SETTINGS.getRefreshFrequency();
-  } else {
-    renderer.displayBuffer();
-    pagesUntilFullRefresh--;
+  if (triggerDisplay) {
+    if (pagesUntilFullRefresh <= 1) {
+      renderer.displayBuffer(HalDisplay::HALF_REFRESH);
+      pagesUntilFullRefresh = SETTINGS.getRefreshFrequency();
+    } else {
+      renderer.displayBuffer();
+      pagesUntilFullRefresh--;
+    }
   }
 
   LOG_DBG("XTR", "Rendered page %lu/%lu (%u-bit)", currentPage + 1, xtc->getPageCount(), bitDepth);

@@ -1133,26 +1133,29 @@ bool GfxRenderer::storeBwBuffer() {
  * It should be called to restore the BW buffer state after grayscale rendering is complete.
  * Uses chunked restoration to match chunked storage.
  */
-void GfxRenderer::restoreBwBuffer(bool freeChunks) {
-  if (!bwBufferChunks[0]) {
+void GfxRenderer::restoreBwBuffer() {
+  bool missingChunks = false;
+  for (const auto& bwBufferChunk : bwBufferChunks) {
+    if (!bwBufferChunk) {
+      missingChunks = true;
+      break;
+    }
+  }
+
+  if (missingChunks) {
+    freeBwBufferChunks();
     return;
   }
 
   for (size_t i = 0; i < BW_BUFFER_NUM_CHUNKS; i++) {
     const size_t offset = i * BW_BUFFER_CHUNK_SIZE;
-    if (bwBufferChunks[i]) {
-      memcpy(frameBuffer + offset, bwBufferChunks[i], BW_BUFFER_CHUNK_SIZE);
-    }
+    memcpy(frameBuffer + offset, bwBufferChunks[i], BW_BUFFER_CHUNK_SIZE);
   }
 
   display.cleanupGrayscaleBuffers(frameBuffer);
 
-  if (freeChunks) {
-    freeBwBufferChunks();
-    LOG_DBG("GFX", "Restored and freed BW buffer chunks");
-  } else {
-    LOG_DBG("GFX", "Restored BW buffer chunks (not freed)");
-  }
+  freeBwBufferChunks();
+  LOG_DBG("GFX", "Restored and freed BW buffer chunks");
 }
 
 /**
