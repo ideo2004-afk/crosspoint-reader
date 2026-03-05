@@ -8,6 +8,15 @@ Xteink firmware. It aims to match or improve upon the standard EPUB reading expe
 
 ![](./docs/images/cover.jpg)
 
+## Screenshots
+
+<p align="center">
+  <img src="./docs/images/home_flow_theme.png" width="200" alt="Flow Theme Home"/>
+  <img src="./docs/images/reader_vertical.png" width="200" alt="Vertical Reading"/>
+  <img src="./docs/images/file_explorer.png" width="200" alt="File Explorer"/>
+  <img src="./docs/images/qubic_game.png" width="200" alt="Qubic Game"/>
+</p>
+
 ## Motivation
 
 E-paper devices are fantastic for reading, but most commercially available readers are closed systems with limited
