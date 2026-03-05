@@ -15,7 +15,7 @@ class XtcReaderActivity final : public ActivityWithSubactivity {
   std::shared_ptr<Xtc> xtc;
 
   uint32_t currentPage = 0;
-  int pagesUntilFullRefresh = 0;
+  int pagesUntilFullRefresh = 5; // Start with a few pages of fast refresh
   uint32_t sessionStartMillis = 0;
 
   const std::function<void()> onGoBack;
