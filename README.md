@@ -44,8 +44,12 @@ This project is **not affiliated with Xteink**; it's built as a community projec
   - [ ] EPUB picker with cover art
 - [x] Custom sleep screen
   - [x] Cover sleep screen
+  - [x] **Page sleep mode**: Freeze current screen instantly with a minimal indicator (best for instant resume)
 - [x] Wifi book upload
 - [x] Wifi OTA updates
+- [x] High-performance XTC Reader
+  - [x] **Memory Breakthrough**: 50% reduction in page table memory, enabling stable reading of 4000+ page books on constrained hardware.
+  - [x] **Instant Start**: Optimized refresh logic for near-instant transitions when entering books.
 - [x] Configurable font, layout, and display options
   - [x] Customisable Themes (e.g., Flow Theme with rounded covers)
   - [x] Enhanced 1-bit image rendering (Floyd-Steinberg dithering, contrast & gamma tuning)
