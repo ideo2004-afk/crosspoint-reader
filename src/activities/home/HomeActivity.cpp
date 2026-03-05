@@ -174,7 +174,7 @@ void HomeActivity::loop() {
   const int menuCount = 4;
 
   // Debounce/Cooldown (E-ink is slow, prevent multiple triggers)
-  if (millis() - lastInputMs < 300) return;
+  if (millis() - lastInputMs < 200) return;
 
   auto getNextBookIdx = [](int cur, int total) {
     if (total <= 1) return 0;

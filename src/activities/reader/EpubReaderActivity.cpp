@@ -180,7 +180,7 @@ void EpubReaderActivity::loop() {
   // Front RIGHT cluster (LEFT + RIGHT): short=next page, long=reader menu
   // Side UP:   short=next page, long=+10 pages
   // Side DOWN: short=prev page, long=-10 pages
-  const unsigned long longPressMs = 600;
+  const unsigned long longPressMs = 350;
 
   // === Menu Input Handling ===
   if (inMenu) {
@@ -227,25 +227,25 @@ void EpubReaderActivity::loop() {
   }
 
   // Front LEFT cluster: short=prev page, long=go home (snappy)
-  if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_BACK, 1000) || 
-      mappedInput.wasLongPressedRaw(HalGPIO::BTN_CONFIRM, 1000)) {
+  if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_BACK, 800) || 
+      mappedInput.wasLongPressedRaw(HalGPIO::BTN_CONFIRM, 800)) {
     onGoHome();
     return;
   }
-  const bool frontLeftShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_BACK, 1000) || 
-                              mappedInput.wasShortPressedRaw(HalGPIO::BTN_CONFIRM, 1000);
+  const bool frontLeftShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_BACK, 800) || 
+                              mappedInput.wasShortPressedRaw(HalGPIO::BTN_CONFIRM, 800);
 
   // Front RIGHT cluster: short=next page, long=menu (snappy)
-  if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_LEFT, 500) || 
-      mappedInput.wasLongPressedRaw(HalGPIO::BTN_RIGHT, 500)) {
+  if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_LEFT, 350) || 
+      mappedInput.wasLongPressedRaw(HalGPIO::BTN_RIGHT, 350)) {
     renderer.storeBwBuffer();
     inMenu = true;
     menuSelectedIndex = 0;
     requestUpdate();
     return;
   }
-  const bool frontRightShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_LEFT, 500) || 
-                               mappedInput.wasShortPressedRaw(HalGPIO::BTN_RIGHT, 500);
+  const bool frontRightShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_LEFT, 350) || 
+                               mappedInput.wasShortPressedRaw(HalGPIO::BTN_RIGHT, 350);
 
   // Side UP: short = next page, long = +10 pages
   const bool sideUpShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_UP, 500);

@@ -80,7 +80,7 @@ void XtcReaderActivity::loop() {
     return;
   }
 
-  const unsigned long longPressMs = 600;
+  const unsigned long longPressMs = 350;
 
   // === Menu Input Handling ===
   if (inMenu) {
@@ -129,17 +129,17 @@ void XtcReaderActivity::loop() {
   // === Custom Fixed Button Layout ===
 
   // Front LEFT: short=prev, long=home (snappy)
-  if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_BACK, 1000) || 
-      mappedInput.wasLongPressedRaw(HalGPIO::BTN_CONFIRM, 1000)) {
+  if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_BACK, 800) || 
+      mappedInput.wasLongPressedRaw(HalGPIO::BTN_CONFIRM, 800)) {
     onGoHome();
     return;
   }
-  const bool frontLeftShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_BACK, 1000) || 
-                              mappedInput.wasShortPressedRaw(HalGPIO::BTN_CONFIRM, 1000);
+  const bool frontLeftShort = mappedInput.wasShortPressedRaw(HalGPIO::BTN_BACK, 800) || 
+                              mappedInput.wasShortPressedRaw(HalGPIO::BTN_CONFIRM, 800);
 
   // Front RIGHT: short=next, long=menu (snappy)
-  if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_LEFT, 500) || 
-      mappedInput.wasLongPressedRaw(HalGPIO::BTN_RIGHT, 500)) {
+  if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_LEFT, 350) || 
+      mappedInput.wasLongPressedRaw(HalGPIO::BTN_RIGHT, 350)) {
     inMenu = true;
     menuSelectedIndex = 0;
     requestUpdate();

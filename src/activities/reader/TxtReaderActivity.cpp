@@ -99,16 +99,16 @@ void TxtReaderActivity::loop() {
   // Front RIGHT cluster (LEFT+RIGHT): short=next, long=(reserved)
   // Side UP: short=next page, long=+10 pages
   // Side DOWN: short=prev page, long=-10 pages
-  const unsigned long longPressMs = 600;
+  const unsigned long longPressMs = 350;
 
   // Front LEFT long press -> home
   if (mappedInput.isPressedAnyOf(HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM) &&
-      mappedInput.getHeldTime() >= 1000) {
+      mappedInput.getHeldTime() >= 800) {
     onGoHome();
     return;
   }
   const bool frontLeftShort = mappedInput.wasReleasedAnyOf(HalGPIO::BTN_BACK, HalGPIO::BTN_CONFIRM) &&
-                              mappedInput.getHeldTime() < 1000;
+                              mappedInput.getHeldTime() < 800;
   const bool frontRightShort = mappedInput.wasReleasedAnyOf(HalGPIO::BTN_LEFT, HalGPIO::BTN_RIGHT) &&
                                mappedInput.getHeldTime() < longPressMs;
 
