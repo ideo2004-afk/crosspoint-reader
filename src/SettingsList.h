@@ -46,8 +46,6 @@ inline std::vector<SettingInfo> getSettingsList() {
                         StrId::STR_CAT_READER),
       SettingInfo::Enum(StrId::STR_LINE_SPACING, &CrossPointSettings::lineSpacing,
                         {StrId::STR_TIGHT, StrId::STR_NORMAL, StrId::STR_WIDE}, "lineSpacing", StrId::STR_CAT_READER),
-      SettingInfo::Value(StrId::STR_SCREEN_MARGIN, &CrossPointSettings::screenMargin, {5, 40, 5}, "screenMargin",
-                         StrId::STR_CAT_READER),
       SettingInfo::Enum(StrId::STR_PARA_ALIGNMENT, &CrossPointSettings::paragraphAlignment,
                         {StrId::STR_JUSTIFY, StrId::STR_ALIGN_LEFT, StrId::STR_CENTER, StrId::STR_ALIGN_RIGHT,
                          StrId::STR_BOOK_S_STYLE},
@@ -65,13 +63,24 @@ inline std::vector<SettingInfo> getSettingsList() {
                           StrId::STR_CAT_READER),
 
       // --- Controls ---
-      SettingInfo::Enum(StrId::STR_SIDE_BTN_LAYOUT, &CrossPointSettings::sideButtonLayout,
-                        {StrId::STR_PREV_NEXT, StrId::STR_NEXT_PREV}, "sideButtonLayout", StrId::STR_CAT_CONTROLS),
-      SettingInfo::Toggle(StrId::STR_LONG_PRESS_SKIP, &CrossPointSettings::longPressChapterSkip, "longPressChapterSkip",
-                          StrId::STR_CAT_CONTROLS),
-      SettingInfo::Enum(StrId::STR_SHORT_PWR_BTN, &CrossPointSettings::shortPwrBtn,
-                        {StrId::STR_IGNORE, StrId::STR_SLEEP, StrId::STR_PAGE_TURN}, "shortPwrBtn",
-                        StrId::STR_CAT_CONTROLS),
+      // Home Page
+      SettingInfo::Action(StrId::STR_CTRL_H_TITLE, SettingAction::None, StrId::STR_CAT_CONTROLS),
+      SettingInfo::Action(StrId::STR_CTRL_H_LEFT, SettingAction::None, StrId::STR_CAT_CONTROLS),
+      SettingInfo::Action(StrId::STR_CTRL_H_RIGHT, SettingAction::None, StrId::STR_CAT_CONTROLS),
+      SettingInfo::Action(StrId::STR_CTRL_H_UP_DN, SettingAction::None, StrId::STR_CAT_CONTROLS),
+      
+      // Reader
+      SettingInfo::Action(StrId::STR_CTRL_R_TITLE, SettingAction::None, StrId::STR_CAT_CONTROLS),
+      SettingInfo::Action(StrId::STR_CTRL_R_L_BTN, SettingAction::None, StrId::STR_CAT_CONTROLS),
+      SettingInfo::Action(StrId::STR_CTRL_R_R_BTN, SettingAction::None, StrId::STR_CAT_CONTROLS),
+      SettingInfo::Action(StrId::STR_CTRL_R_UP_BTN, SettingAction::None, StrId::STR_CAT_CONTROLS),
+      SettingInfo::Action(StrId::STR_CTRL_R_DN_BTN, SettingAction::None, StrId::STR_CAT_CONTROLS),
+      SettingInfo::Action(StrId::STR_CTRL_R_R_LONG, SettingAction::None, StrId::STR_CAT_CONTROLS),
+      SettingInfo::Action(StrId::STR_CTRL_R_L_LONG, SettingAction::None, StrId::STR_CAT_CONTROLS),
+      SettingInfo::Action(StrId::STR_CTRL_R_UP_LONG, SettingAction::None, StrId::STR_CAT_CONTROLS),
+      SettingInfo::Action(StrId::STR_CTRL_R_DN_LONG, SettingAction::None, StrId::STR_CAT_CONTROLS),
+      SettingInfo::Action(StrId::STR_CTRL_R_L_UP_DN, SettingAction::None, StrId::STR_CAT_CONTROLS),
+      SettingInfo::Action(StrId::STR_CTRL_R_R_UP_DN, SettingAction::None, StrId::STR_CAT_CONTROLS),
 
       // --- System ---
       SettingInfo::Enum(StrId::STR_TIME_TO_SLEEP, &CrossPointSettings::sleepTimeout,

@@ -424,9 +424,9 @@ void CrossPointWebServerActivity::renderServerRunning() const {
     drawQRCode(renderer, metrics.contentSidePadding, startY, hostnameUrl);
 
     // Show IP address as fallback
-    renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding + QR_CODE_WIDTH + metrics.verticalSpacing, startY + 80,
+    renderer.drawText(UI_12_FONT_ID, metrics.contentSidePadding + QR_CODE_WIDTH + metrics.verticalSpacing, startY + 80,
                       hostnameUrl.c_str());
-    renderer.drawText(SMALL_FONT_ID, metrics.contentSidePadding + QR_CODE_WIDTH + metrics.verticalSpacing, startY + 100,
+    renderer.drawText(SMALL_FONT_ID, metrics.contentSidePadding + QR_CODE_WIDTH + metrics.verticalSpacing, startY + 110,
                       ipUrl.c_str());
   } else {
     startY += metrics.verticalSpacing * 2;
@@ -444,8 +444,8 @@ void CrossPointWebServerActivity::renderServerRunning() const {
     startY += QR_CODE_HEIGHT + metrics.verticalSpacing * 2;
 
     // Show web server URL prominently
-    renderer.drawCenteredText(UI_10_FONT_ID, startY, webInfo.c_str(), true);
-    startY += height10 + 5;
+    renderer.drawCenteredText(UI_12_FONT_ID, startY, webInfo.c_str(), true);
+    startY += renderer.getLineHeight(UI_12_FONT_ID) + 15;
 
     // Also show hostname URL
     std::string hostnameUrl = std::string(tr(STR_OR_HTTP_PREFIX)) + AP_HOSTNAME + ".local/";
