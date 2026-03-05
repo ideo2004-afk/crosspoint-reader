@@ -16,11 +16,18 @@
 
 void SleepActivity::onEnter() {
   Activity::onEnter();
+
+  switch (SETTINGS.sleepScreen) {
+    case (CrossPointSettings::SLEEP_SCREEN_MODE::PAGE):
+      return renderPageSleepScreen();
+    default:
+      break;
+  }
+
+  // Show popup for all modes except PAGE (which freezes the current screen)
   GUI.drawPopup(renderer, tr(STR_ENTERING_SLEEP));
 
   switch (SETTINGS.sleepScreen) {
-    case (CrossPointSettings::SLEEP_SCREEN_MODE::BLANK):
-      return renderBlankSleepScreen();
     case (CrossPointSettings::SLEEP_SCREEN_MODE::CUSTOM):
       return renderCustomSleepScreen();
     case (CrossPointSettings::SLEEP_SCREEN_MODE::COVER):
@@ -280,7 +287,9 @@ void SleepActivity::renderCoverSleepScreen() const {
   return (this->*renderNoCoverSleepScreen)();
 }
 
-void SleepActivity::renderBlankSleepScreen() const {
-  renderer.clearScreen();
-  renderer.displayBuffer(HalDisplay::HALF_REFRESH);
+void SleepActivity::renderPageSleepScreen() const {
+  // Keep the current framebuffer content (freeze current page/UI).
+  // Draw a small sleep indicator at the fixed position (left side).
+  renderer.drawText(SMALL_FONT_ID, 27, 11, "Zzz");
+  renderer.displayBuffer(HalDisplay::FAST_REFRESH);
 }

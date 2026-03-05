@@ -170,6 +170,7 @@ enum class StrId : uint16_t {
   STR_CUSTOM,
   STR_COVER,
   STR_NONE_OPT,
+  STR_PAGE,
   STR_FIT,
   STR_CROP,
   STR_NO_PROGRESS,
