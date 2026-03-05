@@ -59,6 +59,7 @@ void XtcReaderActivity::onEnter() {
 }
 
 void XtcReaderActivity::onExit() {
+  renderer.restoreBwBuffer(true); // Safety cleanup
   ActivityWithSubactivity::onExit();
 
   if (sessionStartMillis > 0 && xtc) {
@@ -93,6 +94,7 @@ void XtcReaderActivity::loop() {
     } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Confirm)) {
       // Execute Menu Action (Right Cluster)
       inMenu = false;
+      renderer.restoreBwBuffer(true);
       if (menuSelectedIndex == 0) { // Resume
         requestUpdate();
       } else if (menuSelectedIndex == 1) { // Next 10%
@@ -107,12 +109,14 @@ void XtcReaderActivity::loop() {
         pendingScreenshot = true;
         requestUpdate();
       } else if (menuSelectedIndex == 5) { // Exit
+        renderer.restoreBwBuffer(true);
         onGoHome();
       }
       return;
     } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Back)) {
       // Resume/Cancel (Left Cluster)
       inMenu = false;
+      renderer.restoreBwBuffer(true);
       requestUpdate();
       return;
     } else if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_BACK, longPressMs) || 
@@ -120,6 +124,7 @@ void XtcReaderActivity::loop() {
                mappedInput.wasLongPressedRaw(HalGPIO::BTN_LEFT, longPressMs) ||
                mappedInput.wasLongPressedRaw(HalGPIO::BTN_RIGHT, longPressMs)) {
       inMenu = false;
+      renderer.restoreBwBuffer(true);
       requestUpdate();
       return;
     }
@@ -253,12 +258,8 @@ void XtcReaderActivity::render(Activity::RenderLock&&) {
 }
 
 void XtcReaderActivity::renderMenu() const {
-  if (!renderer.storeBwBuffer()) {
-    renderer.clearScreen();
-  }
-  renderer.restoreBwBuffer();
-  // Re-store for subsequent renderMenu calls (e.g. selection move)
-  renderer.storeBwBuffer();
+  // Restore background from buffer (keep chunks in memory for next selection move)
+  renderer.restoreBwBuffer(false);
 
   const int sw = renderer.getScreenWidth();
   const int sh = renderer.getScreenHeight();

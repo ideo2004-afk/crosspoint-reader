@@ -143,7 +143,7 @@ class GfxRenderer {
   void copyGrayscaleMsbBuffers() const;
   void displayGrayBuffer() const;
   bool storeBwBuffer();    // Returns true if buffer was stored successfully
-  void restoreBwBuffer();  // Restore and free the stored buffer
+  void restoreBwBuffer(bool freeChunks = true);  // Restore and optionally free the stored buffer
   void cleanupGrayscaleWithFrameBuffer() const;
 
   // Font helpers
