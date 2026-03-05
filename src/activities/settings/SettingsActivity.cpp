@@ -62,8 +62,9 @@ void SettingsActivity::onExit() {
 }
 
 void SettingsActivity::loop() {
+  // Must call parent loop() to promote pendingSubActivity -> subActivity
+  ActivityWithSubactivity::loop();
   if (subActivity) {
-    subActivity->loop();
     return;
   }
   bool hasChangedCategory = false;
