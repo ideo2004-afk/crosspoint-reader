@@ -24,6 +24,8 @@ class XtcReaderActivity final : public ActivityWithSubactivity {
   bool inMenu = false;
   int menuSelectedIndex = 0;
   bool pendingScreenshot = false;
+  uint8_t* pageBuffer = nullptr;
+  size_t pageBufferCapacity = 0;
 
   std::vector<uint32_t> bookmarks;
   void renderPage();
@@ -45,7 +47,10 @@ class XtcReaderActivity final : public ActivityWithSubactivity {
       : ActivityWithSubactivity("XtcReader", renderer, mappedInput),
         xtc(std::move(xtc)),
         onGoBack(onGoBack),
-        onGoHome(onGoHome) {}
+        onGoHome(onGoHome),
+        pageBuffer(nullptr),
+        pageBufferCapacity(0) {}
+  virtual ~XtcReaderActivity();
   void onEnter() override;
   void onExit() override;
   void loop() override;

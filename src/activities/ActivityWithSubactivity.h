@@ -6,6 +6,7 @@
 class ActivityWithSubactivity : public Activity {
  protected:
   std::unique_ptr<Activity> subActivity = nullptr;
+  Activity* pendingSubActivity = nullptr;
   void exitActivity();
   void enterNewActivity(Activity* activity);
   [[noreturn]] void renderTaskLoop() override;

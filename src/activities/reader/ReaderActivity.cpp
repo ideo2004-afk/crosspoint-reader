@@ -120,6 +120,9 @@ void ReaderActivity::onEnter() {
     return;
   }
 
+  // Clear any existing subactivity before loading new metadata to avoid memory overlap
+  exitActivity();
+
   currentBookPath = initialBookPath;
   if (isBmpFile(initialBookPath)) {
     onGoToBmpViewer(initialBookPath);

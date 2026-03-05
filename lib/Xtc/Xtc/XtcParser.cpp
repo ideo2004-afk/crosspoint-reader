@@ -175,7 +175,9 @@ XtcError XtcParser::readPageTable() {
     return XtcError::READ_ERROR;
   }
 
+  LOG_DBG("XTC", "Reading page table: %u entries (Heap: %d free)", m_header.pageCount, ESP.getFreeHeap());
   m_pageTable.resize(m_header.pageCount);
+  LOG_DBG("XTC", "Page table resized (Heap: %d free)", ESP.getFreeHeap());
 
   // Read page table entries
   for (uint16_t i = 0; i < m_header.pageCount; i++) {
@@ -188,9 +190,6 @@ XtcError XtcParser::readPageTable() {
 
     m_pageTable[i].offset = static_cast<uint32_t>(entry.dataOffset);
     m_pageTable[i].size = entry.dataSize;
-    m_pageTable[i].width = entry.width;
-    m_pageTable[i].height = entry.height;
-    m_pageTable[i].bitDepth = m_bitDepth;
 
     // Update default dimensions from first page
     if (i == 0) {

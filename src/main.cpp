@@ -135,6 +135,8 @@ EpdFontFamily ui12FontFamily(&ui12RegularFont, &ui12BoldFont);
 unsigned long t1 = 0;
 unsigned long t2 = 0;
 
+Activity* nextActivity = nullptr;
+
 void exitActivity() {
   if (currentActivity) {
     currentActivity->onExit();
@@ -144,8 +146,7 @@ void exitActivity() {
 }
 
 void enterNewActivity(Activity* activity) {
-  currentActivity = activity;
-  currentActivity->onEnter();
+  nextActivity = activity;
 }
 
 // Verify power button press duration on wake-up from deep sleep
@@ -205,8 +206,11 @@ void enterDeepSleep() {
   HalPowerManager::Lock powerLock;
   APP_STATE.lastSleepFromReader = currentActivity && currentActivity->isReaderActivity();
   APP_STATE.saveToFile();
+  
+  // Synchronous switch for sleep as this function is blocking/terminal
   exitActivity();
-  enterNewActivity(new SleepActivity(renderer, mappedInputManager));
+  currentActivity = new SleepActivity(renderer, mappedInputManager);
+  currentActivity->onEnter();
 
   display.deepSleep();
   LOG_DBG("MAIN", "Power button press calibration value: %lu ms", t2 - t1);
@@ -222,8 +226,11 @@ void enterLightSleep() {
   HalPowerManager::Lock powerLock;
   APP_STATE.lastSleepFromReader = currentActivity && currentActivity->isReaderActivity();
   APP_STATE.saveToFile();
+  
+  // Synchronous switch for sleep as this function is blocking/terminal
   exitActivity();
-  enterNewActivity(new SleepActivity(renderer, mappedInputManager));
+  currentActivity = new SleepActivity(renderer, mappedInputManager);
+  currentActivity->onEnter();
 
   display.deepSleep(); // e-ink display into low power mode
   LOG_DBG("MAIN", "Entering light sleep (escalates to deep sleep after 3h)");
@@ -237,53 +244,43 @@ void onGoHome();
 void onGoToMyLibraryWithPath(const std::string& path);
 void onGoToRecentBooks();
 void onGoToReader(const std::string& initialEpubPath) {
-  const std::string bookPath = initialEpubPath;  // Copy before exitActivity() invalidates the reference
-  exitActivity();
+  const std::string bookPath = initialEpubPath;
   enterNewActivity(new ReaderActivity(renderer, mappedInputManager, bookPath, onGoHome, onGoToMyLibraryWithPath));
 }
 
 void onGoToFileTransfer() {
-  exitActivity();
   enterNewActivity(new CrossPointWebServerActivity(renderer, mappedInputManager, onGoHome));
 }
 
 void onGoToSettings() {
-  exitActivity();
   enterNewActivity(new SettingsActivity(renderer, mappedInputManager, onGoHome));
 }
 
 void onGoToQubic() {
-  exitActivity();
   enterNewActivity(new QubicActivity(renderer, mappedInputManager, onGoHome));
 }
 
 void onGoToMyLibrary() {
-  exitActivity();
   enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader, "/books"));
 }
 
 void onGoToRecentBooks() {
-  exitActivity();
   enterNewActivity(new RecentBooksActivity(renderer, mappedInputManager, onGoHome, onGoToReader));
 }
 
 void onGoToMyLibraryWithPath(const std::string& path) {
-  exitActivity();
   enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader, path));
 }
 
 void onGoToFlashcard() {
-  exitActivity();
   enterNewActivity(new FlashcardActivity(renderer, mappedInputManager, onGoHome));
 }
 
 void onGoToPlugins() {
-  exitActivity();
   enterNewActivity(new PluginsActivity(renderer, mappedInputManager, onGoHome, onGoToFlashcard, onGoToQubic));
 }
 
 void onGoHome() {
-  exitActivity();
   enterNewActivity(new HomeActivity(renderer, mappedInputManager, onGoToReader, onGoToMyLibrary, onGoToRecentBooks,
                                      onGoToSettings, onGoToFileTransfer, onGoToPlugins));
 }
@@ -399,6 +396,14 @@ void setup() {
 }
 
 void loop() {
+  if (nextActivity) {
+    Activity* activity = nextActivity;
+    nextActivity = nullptr;
+    exitActivity();
+    currentActivity = activity;
+    currentActivity->onEnter();
+  }
+
   static unsigned long maxLoopDuration = 0;
   const unsigned long loopStartTime = millis();
   static unsigned long lastMemPrint = 0;

@@ -90,11 +90,7 @@ struct XtgPageHeader {
 struct PageInfo {
   uint32_t offset;   // File offset to page data (max 4GB file size)
   uint32_t size;     // Data size (bytes)
-  uint16_t width;    // Page width
-  uint16_t height;   // Page height
-  uint8_t bitDepth;  // 1 = XTG (1-bit), 2 = XTH (2-bit grayscale)
-  uint8_t padding;   // Alignment padding
-};  // 16 bytes total
+};  // 8 bytes total
 
 struct ChapterInfo {
   std::string name;

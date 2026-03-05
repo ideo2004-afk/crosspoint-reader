@@ -27,13 +27,23 @@ void ActivityWithSubactivity::exitActivity() {
 }
 
 void ActivityWithSubactivity::enterNewActivity(Activity* activity) {
-  // Acquire lock to avoid 2 activities rendering at the same time during transition
-  RenderLock lock(*this);
-  subActivity.reset(activity);
-  subActivity->onEnter();
+  // Defer activity creation to the next loop iteration to prevent use-after-free
+  // if the caller is currently executing from the current sub-activity's stack.
+  pendingSubActivity = activity;
 }
 
 void ActivityWithSubactivity::loop() {
+  if (pendingSubActivity) {
+    Activity* act = pendingSubActivity;
+    pendingSubActivity = nullptr;
+    
+    // Acquire lock and switch activity
+    RenderLock lock(*this);
+    exitActivity();
+    subActivity.reset(act);
+    subActivity->onEnter();
+  }
+
   if (subActivity) {
     subActivity->loop();
   }
@@ -48,6 +58,10 @@ void ActivityWithSubactivity::requestUpdate() {
 
 void ActivityWithSubactivity::onExit() {
   // No need to lock, onExit() already acquires its own lock
+  if (pendingSubActivity) {
+    delete pendingSubActivity;
+    pendingSubActivity = nullptr;
+  }
   exitActivity();
   Activity::onExit();
 }

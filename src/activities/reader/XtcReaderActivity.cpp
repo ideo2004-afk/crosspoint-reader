@@ -7,6 +7,13 @@
 
 #include "XtcReaderActivity.h"
 
+XtcReaderActivity::~XtcReaderActivity() {
+  if (pageBuffer) {
+    free(pageBuffer);
+    pageBuffer = nullptr;
+  }
+}
+
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
@@ -297,21 +304,29 @@ void XtcReaderActivity::renderPage() {
     pageBufferSize = ((pageWidth + 7) / 8) * pageHeight;
   }
 
-  // Allocate page buffer
-  uint8_t* pageBuffer = static_cast<uint8_t*>(malloc(pageBufferSize));
-  if (!pageBuffer) {
-    LOG_ERR("XTR", "Failed to allocate page buffer (%lu bytes)", pageBufferSize);
-    renderer.clearScreen();
-    renderer.drawCenteredText(UI_12_FONT_ID, 300, tr(STR_MEMORY_ERROR), true, EpdFontFamily::BOLD);
-    renderer.displayBuffer();
-    return;
+  // Allocate or resize page buffer if needed
+  if (!pageBuffer || pageBufferSize > pageBufferCapacity) {
+    if (pageBuffer) {
+      free(pageBuffer);
+    }
+    pageBuffer = static_cast<uint8_t*>(malloc(pageBufferSize));
+    if (!pageBuffer) {
+      LOG_ERR("XTR", "Failed to allocate page buffer (%lu bytes)", pageBufferSize);
+      pageBufferCapacity = 0;
+      renderer.clearScreen();
+      renderer.drawCenteredText(UI_12_FONT_ID, 300, tr(STR_MEMORY_ERROR), true, EpdFontFamily::BOLD);
+      renderer.displayBuffer();
+      return;
+    }
+    pageBufferCapacity = pageBufferSize;
+    LOG_DBG("XTR", "Allocated page buffer: %lu bytes", pageBufferCapacity);
   }
 
   // Load page data
   size_t bytesRead = xtc->loadPage(currentPage, pageBuffer, pageBufferSize);
   if (bytesRead == 0) {
     LOG_ERR("XTR", "Failed to load page %lu", currentPage);
-    free(pageBuffer);
+    // Note: we don't free the buffer here, we keep it for potential future successful loads
     renderer.clearScreen();
     renderer.drawCenteredText(UI_12_FONT_ID, 300, tr(STR_PAGE_LOAD_ERROR), true, EpdFontFamily::BOLD);
     renderer.displayBuffer();
@@ -351,15 +366,6 @@ void XtcReaderActivity::renderPage() {
     // Optimized grayscale rendering without storeBwBuffer (saves 48KB peak memory)
     // Flow: BW display → LSB/MSB passes → grayscale display → re-render BW for next frame
 
-    // Count pixel distribution for debugging
-    uint32_t pixelCounts[4] = {0, 0, 0, 0};
-    for (uint16_t y = 0; y < pageHeight; y++) {
-      for (uint16_t x = 0; x < pageWidth; x++) {
-        pixelCounts[getPixelValue(x, y)]++;
-      }
-    }
-    LOG_DBG("XTR", "Pixel distribution: White=%lu, DarkGrey=%lu, LightGrey=%lu, Black=%lu", pixelCounts[0],
-            pixelCounts[1], pixelCounts[2], pixelCounts[3]);
 
     // Pass 1: BW buffer - draw pixels (inverted in Dark Mode)
     for (uint16_t y = 0; y < pageHeight; y++) {
@@ -429,8 +435,6 @@ void XtcReaderActivity::renderPage() {
         // But we MUST re-render the status bar so it appears on the PHYSICAL screen if it wasn't part of the BW pass.
     }
 
-    free(pageBuffer);
-
     // Overlay status bar on top of the rendered page bitmap
     renderBookmarkIndicator();
     renderStatusBar();
@@ -471,8 +475,6 @@ void XtcReaderActivity::renderPage() {
     }
   }
   // White pixels are already cleared by clearScreen()
-
-  free(pageBuffer);
 
   // Overlay status bar on top of the rendered page bitmap
   renderBookmarkIndicator();
