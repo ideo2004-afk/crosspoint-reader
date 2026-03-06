@@ -174,7 +174,7 @@ void HomeActivity::loop() {
   const int menuCount = 4;
 
   // Debounce/Cooldown (E-ink is slow, prevent multiple triggers)
-  if (millis() - lastInputMs < 200) return;
+  if (millis() - lastInputMs < 100) return;
 
   auto getNextBookIdx = [](int cur, int total) {
     if (total <= 1) return 0;
@@ -191,7 +191,7 @@ void HomeActivity::loop() {
   // [ B2 B1 B3 ] -> Left -> [ B4 B2 B1 ]
 
   // Use "左下按鍵" (Cluster Left: 0, 1) for book cycling
-  if (mappedInput.wasReleasedRaw(0)) { // LEFT Cluster Left
+  if (mappedInput.wasPressedRaw(0)) { // LEFT Cluster Left
     if (bookCount > 0) {
       lastInputMs = millis();
       focusZone = Zone::BOOKS;
@@ -199,7 +199,7 @@ void HomeActivity::loop() {
       requestUpdate();
     }
   }
-  if (mappedInput.wasReleasedRaw(1)) { // LEFT Cluster Right
+  if (mappedInput.wasPressedRaw(1)) { // LEFT Cluster Right
     if (bookCount > 0) {
       lastInputMs = millis();
       focusZone = Zone::BOOKS;
@@ -209,7 +209,7 @@ void HomeActivity::loop() {
   }
 
   // Use Side buttons (4, 5) for focus/menu navigation
-  if (mappedInput.wasReleasedRaw(4)) { // UP
+  if (mappedInput.wasPressedRaw(4)) { // UP
     lastInputMs = millis();
     if (focusZone == Zone::MENU) {
       if (menuSelectorIndex == 0) {
@@ -223,7 +223,7 @@ void HomeActivity::loop() {
     }
     requestUpdate();
   }
-  if (mappedInput.wasReleasedRaw(5)) { // DOWN
+  if (mappedInput.wasPressedRaw(5)) { // DOWN
     lastInputMs = millis();
     if (focusZone == Zone::BOOKS) {
       focusZone = Zone::MENU;
@@ -239,7 +239,7 @@ void HomeActivity::loop() {
   }
 
   // Use "右下前端" (Cluster Right: 2, 3) for Confirmation
-  if (mappedInput.wasReleasedRaw(2) || mappedInput.wasReleasedRaw(3)) {
+  if (mappedInput.wasPressedRaw(2) || mappedInput.wasPressedRaw(3)) {
     lastInputMs = millis();
     int idx = 0;
     const int myLibraryIdx = idx++;
