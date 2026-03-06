@@ -55,6 +55,7 @@ void XtcReaderActivity::onEnter() {
   sessionStartMillis = millis();
 
   // Trigger first update
+  skipNextButtonCheck = true;
   requestUpdate();
 }
 

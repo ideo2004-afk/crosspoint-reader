@@ -107,6 +107,7 @@ void EpubReaderActivity::onEnter() {
 
   // Trigger first update
   loadBookmarks();
+  skipNextButtonCheck = true;
   requestUpdate();
 }
 

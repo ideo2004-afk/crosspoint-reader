@@ -349,6 +349,7 @@ void setup() {
   SETTINGS.loadFromFile();
   I18N.loadSettings();
   UITheme::getInstance().reload();
+  renderer.setFadingFix(SETTINGS.fadingFix);
   ButtonNavigator::setMappedInputManager(mappedInputManager);
 
   switch (gpio.getWakeupReason()) {
