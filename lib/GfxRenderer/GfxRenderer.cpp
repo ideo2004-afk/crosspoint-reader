@@ -797,6 +797,122 @@ void GfxRenderer::drawBitmap1Bit(const Bitmap& bitmap, const int x, const int y,
   free(rowBytes);
 }
 
+void GfxRenderer::drawBitmapRect(const Bitmap& bitmap, const int srcX, const int srcY, const int srcW, const int srcH,
+                                const int dstX, const int dstY, const int dstW, const int dstH) const {
+  if (dstW <= 0 || dstH <= 0 || srcW <= 0 || srcH <= 0) return;
+
+  const int totalSrcW = bitmap.getWidth();
+  const int totalSrcH = bitmap.getHeight();
+
+  for (int dy = 0; dy < dstH; dy++) {
+    int screenY = dstY + dy;
+    if (screenY < 0 || screenY >= getScreenHeight()) continue;
+
+    // Map dy to srcY
+    int relativeSrcY = (dy * srcH) / dstH;
+    int absoluteSrcY = srcY + relativeSrcY;
+    if (absoluteSrcY >= totalSrcH) absoluteSrcY = totalSrcH - 1;
+
+    // Read row from bitmap (this is inefficient for scaling but avoids massive RAM buffers for huge images)
+    // Actually, for thumbs, it's okay.
+    // However, Bitmap class is designed for sequential row reading.
+    // For arbitrary rect, we might need to rewind or buffer.
+    // Let's assume we use this for small thumbs and it's okay.
+  }
+  // TODO: Implementation of non-sequential Bitmap reading is complex. 
+  // For now, let's focus on drawPerspectiveBitmap which buffers the WHOLE thing.
+}
+
+void GfxRenderer::drawPerspectiveBitmap(const Bitmap& bitmap, const int x, const int y, const int width, int hLeft,
+                                         int hRight) const {
+  if (width <= 0 || hLeft <= 0 || hRight <= 0) return;
+
+  const int srcW = bitmap.getWidth();
+  const int srcH = bitmap.getHeight();
+  
+  // 1. Buffer the entire bitmap in 2-bit format (~17KB for 220x314)
+  const int srcRowSize = (srcW + 3) / 4;
+  uint8_t* buffer = static_cast<uint8_t*>(malloc(srcRowSize * srcH));
+  uint8_t* rowBytes = static_cast<uint8_t*>(malloc(bitmap.getRowBytes()));
+  
+  if (!buffer || !rowBytes) {
+      LOG_ERR("GFX", "!! OOM buffering for perspective draw");
+      free(buffer);
+      free(rowBytes);
+      return;
+  }
+
+  // Ensure we are at the start of pixel data
+  bitmap.rewindToData();
+  for (int i = 0; i < srcH; i++) {
+      if (bitmap.readNextRow(buffer + (i * srcRowSize), rowBytes) != BmpReaderError::Ok) {
+          LOG_ERR("GFX", "Failed to buffer row %d", i);
+          free(buffer);
+          free(rowBytes);
+          return;
+      }
+  }
+  free(rowBytes);
+
+  // 2. Warp rendering
+  const int targetMaxH = std::max(hLeft, hRight);
+  const int targetCenterY = y + targetMaxH / 2;
+
+  for (int dstX = 0; dstX < width; dstX++) {
+      int screenX = x + dstX;
+      if (screenX < 0 || screenX >= getScreenWidth()) continue;
+
+      // Linear interpolation for height at this column
+      float t = static_cast<float>(dstX) / (width - 1);
+      int hCol = std::round(hLeft * (1.0f - t) + hRight * t);
+      if (hCol <= 0) continue;
+
+      int dstYStart = targetCenterY - hCol / 2;
+      
+      // Map dstX to srcX
+      int srcX = (dstX * srcW) / width;
+      if (srcX >= srcW) srcX = srcW - 1;
+
+      for (int dy = 0; dy < hCol; dy++) {
+          int screenY = dstYStart + dy;
+          if (screenY < 0 || screenY >= getScreenHeight()) continue;
+
+          // Map dy to srcY
+          int srcY = (dy * srcH) / hCol;
+          if (srcY >= srcH) srcY = srcH - 1;
+
+          // Flip Y if not top-down BMP (internal buffer is in storage order)
+          int bufferedY = bitmap.isTopDown() ? srcY : (srcH - 1 - srcY);
+          
+          const uint8_t byte = buffer[bufferedY * srcRowSize + (srcX / 4)];
+          const uint8_t val = (byte >> (6 - ((srcX % 4) * 2))) & 0x03;
+
+          if (renderMode == BW) {
+              // Draw both black and white pixels to ensure occlusion works
+              drawPixel(screenX, screenY, val < 3);
+          } else if (renderMode == GRAYSCALE_MSB && (val == 1 || val == 2)) {
+              drawPixel(screenX, screenY, false);
+          } else if (renderMode == GRAYSCALE_LSB && val == 1) {
+              drawPixel(screenX, screenY, false);
+          }
+      }
+      
+      // Draw 1px top/bottom frame
+      if (renderMode == BW) {
+        drawPixel(screenX, dstYStart, true);
+        drawPixel(screenX, dstYStart + hCol - 1, true);
+      }
+  }
+  
+  // Draw 1px left/right borders
+  if (renderMode == BW) {
+      drawLine(x, targetCenterY - hLeft/2, x, targetCenterY + hLeft/2 - 1, true);
+      drawLine(x + width - 1, targetCenterY - hRight/2, x + width - 1, targetCenterY + hRight/2 - 1, true);
+  }
+
+  free(buffer);
+}
+
 void GfxRenderer::fillPolygon(const int* xPoints, const int* yPoints, int numPoints, bool state) const {
   if (numPoints < 3) return;
 

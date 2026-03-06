@@ -178,18 +178,12 @@ void HomeActivity::loop() {
 
   auto getNextBookIdx = [](int cur, int total) {
     if (total <= 1) return 0;
-    if (cur == 1) return 0; // B2 -> B1
-    if (cur == 0) return (total > 2) ? 2 : 1; // B1 -> B3 (or wrap)
-    if (cur == total - 1) return (total > 1) ? 1 : 0; // B6 -> B2
-    return cur + 1; // B3 -> B4 -> B5
+    return (cur + 1) % total;
   };
   
   auto getPrevBookIdx = [](int cur, int total) {
     if (total <= 1) return 0;
-    if (cur == 0) return 1; // B1 -> B2
-    if (cur == 1) return total - 1; // B2 -> B6
-    if (cur == 2) return 0; // B3 -> B1
-    return cur - 1; // B6 -> B5 ...
+    return (cur + total - 1) % total;
   };
 
   // Per user request:
@@ -314,10 +308,6 @@ void HomeActivity::render(Activity::RenderLock&&) {
     requestUpdate();
   } else if (!recentsLoaded && !recentsLoading) {
     recentsLoading = true;
-    loadRecentCovers(metrics.homeCoverHeight); // 294 for Flow
-    // Also pre-generate for Flow side covers (200 height)
-    if (SETTINGS.uiTheme == (int)CrossPointSettings::UI_THEME::FLOW) {
-      loadRecentCovers(200);
-    }
+    loadRecentCovers(metrics.homeCoverHeight); // 294 or 314 for Flow
   }
 }

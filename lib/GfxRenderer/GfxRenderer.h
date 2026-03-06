@@ -111,6 +111,9 @@ class GfxRenderer {
   void drawBitmap(const Bitmap& bitmap, int x, int y, int maxWidth, int maxHeight, float cropX = 0,
                   float cropY = 0) const;
   void drawBitmap1Bit(const Bitmap& bitmap, int x, int y, int maxWidth, int maxHeight) const;
+  void drawBitmapRect(const Bitmap& bitmap, int srcX, int srcY, int srcW, int srcH, int dstX, int dstY, int dstW,
+                      int dstH) const;
+  void drawPerspectiveBitmap(const Bitmap& bitmap, int x, int y, int width, int hLeft, int hRight) const;
   void fillPolygon(const int* xPoints, const int* yPoints, int numPoints, bool state = true) const;
 
   // Text

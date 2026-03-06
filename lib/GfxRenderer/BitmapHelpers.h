@@ -120,6 +120,7 @@ class AtkinsonDitherer {
   AtkinsonDitherer& operator=(const AtkinsonDitherer& other) = delete;
 
   uint8_t processPixel(int gray, int x) {
+    gray = adjustPixel(gray);
     // Add accumulated error
     int adjusted = gray + errorRow0[x + 2];
     if (adjusted < 0) adjusted = 0;
@@ -222,6 +223,7 @@ class FloydSteinbergDitherer {
   // Process a single pixel and return quantized 2-bit value
   // x is the logical x position (0 to width-1), direction handled internally
   uint8_t processPixel(int gray, int x) {
+    gray = adjustPixel(gray);
     // Add accumulated error to this pixel
     int adjusted = gray + errorCurRow[x + 1];
 
@@ -340,6 +342,7 @@ class FloydSteinberg1BitDitherer {
   FloydSteinberg1BitDitherer& operator=(const FloydSteinberg1BitDitherer&) = delete;
 
   uint8_t processPixel(int gray, int x) {
+    gray = adjustPixel(gray);
     // Add accumulated error
     int adjusted = gray + errorCurRow[x + 1];
     if (adjusted < 0) adjusted = 0;

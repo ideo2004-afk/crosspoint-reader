@@ -16,10 +16,12 @@
 
 namespace {
 constexpr int cornerRadius = 6;
-constexpr int sideCoverWidth = 150;
-constexpr int sideCoverHeight = 200;
+constexpr int sideCoverWidth = 66; // 30% of 220
 constexpr int centerCoverWidth = 220;
-constexpr int centerCoverHeight = 294;
+constexpr int centerCoverHeight = 314;
+constexpr int sideInnerHeight = 282; // 90% of 314
+constexpr int sideOuterHeight = 250; // 80% of 314
+constexpr int sideFarOuterHeight = 282; 
 constexpr int hPadding = 10;
 constexpr int bookCornerRadius = 12;
 
@@ -59,60 +61,65 @@ void FlowTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
     
     // Per user request: [ 2 1 3 ] order
     // We want to show up to 2 side covers
-    auto drawStackedCover = [&](int idx, bool isLeft) {
+    // Stacked Cover Helper
+    auto drawStackedCover = [&](int idx, bool isLeft, bool isFar) {
         int w = sideCoverWidth;
-        int h = sideCoverHeight; // 160
+        int hL, hR;
         
-        // Offset for side covers to peek from behind
-        int xOffset = (centerCoverWidth / 2) + 10; // Reduced gap to overlap more
-        int drawX = isLeft ? (centerX - xOffset - w + 80) : (centerX + xOffset - 80);
-        int drawY = centerY + (centerCoverHeight - h) / 2;
+        // All side covers (2, 3, 4, 5) now use the same slant ratio
+        if (isLeft) {
+            // Left side covers: right edge is inner/taller
+            hR = sideOuterHeight;
+            hL = sideInnerHeight;
+        } else {
+            // Right side covers: left edge is inner/taller
+            hR = sideInnerHeight;
+            hL = sideOuterHeight;
+        }
         
-        const std::string coverPath = UITheme::getCoverThumbPath(recentBooks[idx].coverBmpPath, h);
+        // Direct X coordinate mapping based on user request:
+        // [3] x=30, [2] x=80, [4] x=330, [5] x=380
+        int drawX;
+        if (isLeft) {
+            drawX = isFar ? 30 : 80;   // [3] or [2]
+        } else {
+            drawX = isFar ? 385 : 335; // [5] or [4]
+        }
+        int hMax = std::max(hL, hR);
+        int drawY = centerY + (centerCoverHeight / 2) - (hMax / 2); 
+        
+        const std::string coverPath = UITheme::getCoverThumbPath(recentBooks[idx].coverBmpPath, centerCoverHeight);
         FsFile file;
         
         bool success = false;
         if (!coverPath.empty() && Storage.openFileForRead("HOME", coverPath, file)) {
             Bitmap bitmap(file);
             if (bitmap.parseHeaders() == BmpReaderError::Ok) {
-                renderer.drawBitmap(bitmap, drawX, drawY, w, h);
+                renderer.drawPerspectiveBitmap(bitmap, drawX, drawY, w, hL, hR);
                 success = true;
             }
             file.close();
         }
         
         if (!success) {
-            renderer.fillRect(drawX, drawY, w, h, false); // Clear
-            renderer.drawRoundedRect(drawX, drawY, w, h, 1, bookCornerRadius, true);
-        } else {
-            cutRoundedCorners(renderer, drawX, drawY, w, h, bookCornerRadius);
-            renderer.drawRoundedRect(drawX, drawY, w, h, 1, bookCornerRadius, true);
+            // Draw a simple trapezoid if no image
+            renderer.fillRect(drawX, drawY, w, hMax, false);
+            renderer.drawRect(drawX, drawY, w, hMax, true);
         }
     };
 
-    // Spatial mapping per user request: [ 2 1 3 4 5 6 ]
-    int leftIdx = -1, rightIdx = -1;
-    if (count > 1) {
-        // next logic
-        if (curIdx == 1) rightIdx = 0;
-        else if (curIdx == 0) rightIdx = (count > 2) ? 2 : 1;
-        else if (curIdx == count - 1) rightIdx = 1;
-        else rightIdx = curIdx + 1;
+    // Index mapping for 5 covers: [3 2 1 4 5]
+    int idx1 = curIdx;
+    int idx2 = (curIdx + count - 1) % count;
+    int idx3 = (curIdx + count - 2) % count;
+    int idx4 = (curIdx + 1) % count;
+    int idx5 = (curIdx + 2) % count;
 
-        // prev logic
-        if (curIdx == 0) leftIdx = 1;
-        else if (curIdx == 1) leftIdx = count - 1;
-        else if (curIdx == 2) leftIdx = 0;
-        else leftIdx = curIdx - 1;
-    }
-
-    // Draw stacked covers from outside in (behind to front)
-    if (rightIdx != -1) {
-        drawStackedCover(rightIdx, false);
-    }
-    if (leftIdx != -1) {
-        drawStackedCover(leftIdx, true);
-    }
+    // Draw Order: [3], [5], [2], [4], [1] (Outside-in)
+    if (count >= 5) drawStackedCover(idx3, true, true);  // 3
+    if (count >= 4) drawStackedCover(idx5, false, true); // 5
+    if (count >= 2) drawStackedCover(idx2, true, false); // 2
+    if (count >= 3) drawStackedCover(idx4, false, false);// 4
 
     // Draw Center Cover (Current)
     {

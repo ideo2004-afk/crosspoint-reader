@@ -382,8 +382,8 @@ bool Xtc::generateThumbBmp(int height) const {
   }
 
   // Calculate target dimensions for thumbnail (fit within 3x3 grid or Home card)
-  // Standardized 0.75 (3:4) aspect ratio
-  const int THUMB_TARGET_WIDTH = height * 0.75;
+  // 25-kai book ratio (14.8×21cm ≈ 0.7)
+  const int THUMB_TARGET_WIDTH = height * 0.7;
   const int THUMB_TARGET_HEIGHT = height;
 
   // Detect content bounding box to remove white margins
@@ -463,11 +463,11 @@ bool Xtc::generateThumbBmp(int height) const {
   uint16_t scaledWidth = static_cast<uint16_t>(contentWidth * scale);
   uint16_t scaledHeight = static_cast<uint16_t>(contentHeight * scale);
   
-  // Center content in fixed 3:4 box
+  // Center content in fixed 0.7 ratio box
   int32_t offsetX = (THUMB_TARGET_WIDTH - scaledWidth) / 2;
   int32_t offsetY = (THUMB_TARGET_HEIGHT - scaledHeight) / 2;
 
-  LOG_DBG("XTC", "Thumb (fixed 3:4): %dx%d -> %dx%d (scaled %dx%d, offset %d,%d)", 
+  LOG_DBG("XTC", "Thumb (0.7 ratio): %dx%d -> %dx%d (scaled %dx%d, offset %d,%d)", 
           contentWidth, contentHeight, THUMB_TARGET_WIDTH, THUMB_TARGET_HEIGHT, scaledWidth, scaledHeight, offsetX, offsetY);
 
   // Create thumbnail BMP file

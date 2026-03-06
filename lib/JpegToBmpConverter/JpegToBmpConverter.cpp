@@ -28,7 +28,7 @@ constexpr bool USE_NOISE_DITHERING = false;  // Hash-based noise dithering (good
 // Pre-resize to target display size (CRITICAL: avoids dithering artifacts from post-downsampling)
 constexpr bool USE_PRESCALE = true;     // true: scale image to target size before dithering
 constexpr int TARGET_MAX_WIDTH = 480;   // Max width for cover images (portrait display width)
-constexpr int TARGET_MAX_HEIGHT = 800;  // Max height for cover images (portrait display height)
+constexpr int TARGET_MAX_HEIGHT = 686;  // 25-kai book ratio (0.7) for 480 width
 // ============================================================================
 
 inline void write16(Print& out, const uint16_t value) {
