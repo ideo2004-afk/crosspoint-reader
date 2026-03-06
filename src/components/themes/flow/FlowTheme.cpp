@@ -49,7 +49,7 @@ void FlowTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
                                    bool& bufferRestored, std::function<bool()> storeCoverBuffer) const {
   const bool hasRecentBooks = !recentBooks.empty();
   const int pageWidth = renderer.getScreenWidth();
-  const int centerY = rect.y + 10;
+  const int centerY = rect.y + 60;
   const int centerX = pageWidth / 2;
   if (hasRecentBooks) {
     int count = recentBooks.size();
@@ -165,7 +165,8 @@ void FlowTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
         
         auto truncatedTitle = renderer.truncatedText(UI_12_FONT_ID, filename.c_str(), pageWidth - 40);
         int titleWidth = renderer.getTextWidth(UI_12_FONT_ID, truncatedTitle.c_str());
-        renderer.drawText(UI_12_FONT_ID, centerX - titleWidth / 2, drawY + centerCoverHeight + 10, truncatedTitle.c_str(), true);
+        // Draw above covers (offset from rect.y)
+        renderer.drawText(UI_12_FONT_ID, centerX - titleWidth / 2, rect.y + 15, truncatedTitle.c_str(), true);
     }
     
     coverRendered = true;
