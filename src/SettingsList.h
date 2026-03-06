@@ -63,18 +63,12 @@ inline std::vector<SettingInfo> getSettingsList() {
                           StrId::STR_CAT_READER),
 
       // --- Controls ---
-      // Home Page
-      SettingInfo::Action(StrId::STR_CTRL_H_TITLE, SettingAction::None, StrId::STR_CAT_CONTROLS),
-      SettingInfo::Action(StrId::STR_CTRL_H_LEFT, SettingAction::None, StrId::STR_CAT_CONTROLS),
-      SettingInfo::Action(StrId::STR_CTRL_H_RIGHT, SettingAction::None, StrId::STR_CAT_CONTROLS),
-      SettingInfo::Action(StrId::STR_CTRL_H_UP_DN, SettingAction::None, StrId::STR_CAT_CONTROLS),
-      
+      SettingInfo::Enum(StrId::STR_SHORT_PWR_BTN, &CrossPointSettings::shortPwrBtn,
+                        {StrId::STR_IGNORE, StrId::STR_SLEEP}, "shortPwrBtn",
+                        StrId::STR_CAT_CONTROLS),
+                        
       // Reader
       SettingInfo::Action(StrId::STR_CTRL_R_TITLE, SettingAction::None, StrId::STR_CAT_CONTROLS),
-      SettingInfo::Action(StrId::STR_CTRL_R_L_BTN, SettingAction::None, StrId::STR_CAT_CONTROLS),
-      SettingInfo::Action(StrId::STR_CTRL_R_R_BTN, SettingAction::None, StrId::STR_CAT_CONTROLS),
-      SettingInfo::Action(StrId::STR_CTRL_R_UP_BTN, SettingAction::None, StrId::STR_CAT_CONTROLS),
-      SettingInfo::Action(StrId::STR_CTRL_R_DN_BTN, SettingAction::None, StrId::STR_CAT_CONTROLS),
       SettingInfo::Action(StrId::STR_CTRL_R_R_LONG, SettingAction::None, StrId::STR_CAT_CONTROLS),
       SettingInfo::Action(StrId::STR_CTRL_R_L_LONG, SettingAction::None, StrId::STR_CAT_CONTROLS),
       SettingInfo::Action(StrId::STR_CTRL_R_UP_LONG, SettingAction::None, StrId::STR_CAT_CONTROLS),

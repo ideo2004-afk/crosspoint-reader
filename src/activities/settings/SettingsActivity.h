@@ -141,6 +141,7 @@ class SettingsActivity final : public ActivityWithSubactivity {
   std::vector<SettingInfo> displaySettings;
   std::vector<SettingInfo> readerSettings;
   std::vector<SettingInfo> controlsSettings;
+  std::vector<StrId> controlsLabels;
   std::vector<SettingInfo> systemSettings;
   const std::vector<SettingInfo>* currentSettings = nullptr;
 

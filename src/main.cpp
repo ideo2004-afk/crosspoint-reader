@@ -203,6 +203,10 @@ void waitForPowerRelease() {
 
 // Enter deep sleep mode (used only by Light Sleep escalation or direct call)
 void enterDeepSleep() {
+  static bool isEnteringSleep = false;
+  if (isEnteringSleep) return;
+  isEnteringSleep = true;
+
   HalPowerManager::Lock powerLock;
   APP_STATE.lastSleepFromReader = currentActivity && currentActivity->isReaderActivity();
   APP_STATE.saveToFile();
@@ -213,7 +217,7 @@ void enterDeepSleep() {
   currentActivity->onEnter();
 
   display.deepSleep();
-  LOG_DBG("MAIN", "Power button press calibration value: %lu ms", t2 - t1);
+  LOG_DBG("MAIN", "Power button press calibration value: %lu ms", (t2 >= t1) ? (t2 - t1) : 0);
   LOG_DBG("MAIN", "Entering deep sleep");
 
   powerManager.startDeepSleep(gpio);
@@ -462,7 +466,7 @@ void loop() {
     return;
   }
 
-  if (gpio.isPressed(HalGPIO::BTN_POWER) && gpio.getHeldTime() > SETTINGS.getPowerButtonDuration()) {
+  if (millis() > 3000 && gpio.isPressed(HalGPIO::BTN_POWER) && gpio.getHeldTime() > SETTINGS.getPowerButtonDuration()) {
     if (gpio.isPressed(HalGPIO::BTN_DOWN)) {
       return;
     }

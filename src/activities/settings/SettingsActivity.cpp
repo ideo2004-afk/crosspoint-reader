@@ -22,6 +22,7 @@ void SettingsActivity::onEnter() {
   displaySettings.clear();
   readerSettings.clear();
   controlsSettings.clear();
+  controlsLabels.clear();
   systemSettings.clear();
 
   for (auto& setting : getSettingsList()) {
@@ -31,7 +32,11 @@ void SettingsActivity::onEnter() {
     } else if (setting.category == StrId::STR_CAT_READER) {
       readerSettings.push_back(std::move(setting));
     } else if (setting.category == StrId::STR_CAT_CONTROLS) {
-      controlsSettings.push_back(std::move(setting));
+      if (setting.type == SettingType::ACTION && setting.action == SettingAction::None) {
+        controlsLabels.push_back(setting.nameId);
+      } else {
+        controlsSettings.push_back(std::move(setting));
+      }
     } else if (setting.category == StrId::STR_CAT_SYSTEM) {
       systemSettings.push_back(std::move(setting));
     }
@@ -210,12 +215,18 @@ void SettingsActivity::render(Activity::RenderLock&&) {
                  selectedSettingIndex == 0);
 
   const auto& settings = *currentSettings;
+  const int listStartY = metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing;
+  int listHeight = pageHeight - (metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight +
+                                metrics.buttonHintsHeight + metrics.verticalSpacing * 2);
+
+  // If in Controls category, shrink list to make room for static info text
+  const bool isControls = (selectedCategoryIndex == 2);
+  if (isControls && !controlsLabels.empty()) {
+    listHeight = (listHeight * 1) / 3;  // Take top 1/3 for settings (like Power Button)
+  }
+
   GUI.drawList(
-      renderer,
-      Rect{0, metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing, pageWidth,
-           pageHeight - (metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.buttonHintsHeight +
-                         metrics.verticalSpacing * 2)},
-      settingsCount, selectedSettingIndex - 1,
+      renderer, Rect{0, listStartY, pageWidth, listHeight}, settingsCount, selectedSettingIndex - 1,
       [&settings](int index) { return std::string(I18N.get(settings[index].nameId)); }, nullptr, nullptr,
       [&settings](int i) {
         const auto& setting = settings[i];
@@ -232,6 +243,23 @@ void SettingsActivity::render(Activity::RenderLock&&) {
         return valueText;
       },
       true);
+
+  // Draw static labels for Controls category
+  if (isControls) {
+    int labelY = listStartY + listHeight + 10;
+    for (const auto labelId : controlsLabels) {
+      if (labelY + 20 > pageHeight - metrics.buttonHintsHeight) break;
+      
+      const char* text = I18N.get(labelId);
+      // Use bold for headers (ending with ':')
+      bool isHeader = false;
+      size_t len = strlen(text);
+      if (len > 0 && text[len-1] == ':') isHeader = true;
+
+      renderer.drawText(UI_10_FONT_ID, 15, labelY, text, !SETTINGS.darkMode, isHeader ? EpdFontFamily::BOLD : EpdFontFamily::REGULAR);
+      labelY += renderer.getLineHeight(UI_10_FONT_ID) + 2;
+    }
+  }
 
   // Always use standard refresh for settings screen
   renderer.displayBuffer();
