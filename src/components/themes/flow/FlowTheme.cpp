@@ -23,7 +23,7 @@ constexpr int sideInnerHeight = 282; // 90% of 314
 constexpr int sideOuterHeight = 250; // 80% of 314
 constexpr int sideFarOuterHeight = 282; 
 constexpr int hPadding = 10;
-constexpr int bookCornerRadius = 12;
+constexpr int bookCornerRadius = 6;
 
 // Helper to "cut" corners of a rectangular area by erasing pixels outside the radius.
 // This simulates rounded corners for bitmaps (which are always rectangular).
@@ -153,7 +153,7 @@ void FlowTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
 
         if (hasSelection) {
             // Highlight border if selected (Book focus)
-            renderer.drawRoundedRect(drawX - 2, drawY - 2, centerCoverWidth + 4, centerCoverHeight + 4, 3, bookCornerRadius + 2, true);
+            renderer.drawRoundedRect(drawX - 2, drawY - 2, centerCoverWidth + 4, centerCoverHeight + 4, 4, bookCornerRadius + 2, true);
         }
 
         // Draw File Name below center cover
@@ -163,10 +163,10 @@ void FlowTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
         size_t lastDot = filename.find_last_of('.');
         if (lastDot != std::string::npos && lastDot > 0) filename = filename.substr(0, lastDot);
         
-        auto truncatedTitle = renderer.truncatedText(UI_12_FONT_ID, filename.c_str(), pageWidth - 40);
-        int titleWidth = renderer.getTextWidth(UI_12_FONT_ID, truncatedTitle.c_str());
+        auto truncatedTitle = renderer.truncatedText(BOOKERLY_14_FONT_ID, filename.c_str(), pageWidth - 40);
+        int titleWidth = renderer.getTextWidth(BOOKERLY_14_FONT_ID, truncatedTitle.c_str());
         // Draw above covers (offset from rect.y)
-        renderer.drawText(UI_12_FONT_ID, centerX - titleWidth / 2, rect.y + 15, truncatedTitle.c_str(), true);
+        renderer.drawText(BOOKERLY_14_FONT_ID, centerX - titleWidth / 2, rect.y + 15, truncatedTitle.c_str(), true);
     }
     
     coverRendered = true;
@@ -228,9 +228,9 @@ void FlowTheme::drawFooter(GfxRenderer& renderer) const {
     uint32_t hours = totalSeconds / 3600;
     uint32_t minutes = (totalSeconds % 3600) / 60;
     
-    char timeStr[48];
+    char timeStr[64];
     snprintf(timeStr, sizeof(timeStr), "You have read for %uh %um", hours, minutes);
     
-    int textWidth = renderer.getTextWidth(NOTOSANS_12_FONT_ID, timeStr);
-    renderer.drawText(NOTOSANS_12_FONT_ID, pageWidth - textWidth - 25, pageHeight - 38, timeStr, Color::Black);
+    int textWidth = renderer.getTextWidth(UI_10_FONT_ID, timeStr);
+    renderer.drawText(UI_10_FONT_ID, (pageWidth - textWidth) / 2, pageHeight - 38, timeStr, Color::Black);
 }
