@@ -17,6 +17,7 @@ enum class SettingAction {
   Network,
   ClearCache,
   ReadingStats,
+  ButtonRemap,
 };
 
 struct SettingInfo {

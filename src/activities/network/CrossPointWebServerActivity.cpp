@@ -359,6 +359,9 @@ void CrossPointWebServerActivity::render(Activity::RenderLock&&) {
       const auto top = (pageHeight - height) / 2;
       renderer.drawCenteredText(UI_10_FONT_ID, top, tr(STR_STARTING_HOTSPOT));
     }
+    
+    GUI.drawButtonHints(renderer, tr(STR_BACK), "", "", "");
+    
     renderer.displayBuffer();
   }
 }

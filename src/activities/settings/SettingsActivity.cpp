@@ -8,6 +8,7 @@
 #include "MappedInputManager.h"
 #include "SettingsList.h"
 #include "activities/network/WifiSelectionActivity.h"
+#include "activities/settings/ButtonRemapActivity.h"
 #include "activities/settings/ReadingStatsActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
@@ -184,6 +185,9 @@ void SettingsActivity::toggleCurrentSetting() {
       case SettingAction::ReadingStats:
         enterSubActivity(new ReadingStatsActivity(renderer, mappedInput, onComplete));
         break;
+      case SettingAction::ButtonRemap:
+        enterSubActivity(new ButtonRemapActivity(renderer, mappedInput, onComplete));
+        break;
       case SettingAction::None:
         // Do nothing
         break;
@@ -260,6 +264,9 @@ void SettingsActivity::render(Activity::RenderLock&&) {
       labelY += renderer.getLineHeight(UI_10_FONT_ID) + 2;
     }
   }
+
+  // Draw button hints at the bottom
+  GUI.drawButtonHints(renderer, tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
 
   // Always use standard refresh for settings screen
   renderer.displayBuffer();

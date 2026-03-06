@@ -23,17 +23,13 @@ bool MappedInputManager::mapButton(const Button button, bool (HalGPIO::*fn)(uint
 
   switch (button) {
     case Button::Back:
-      // Front LEFT cluster (BTN_BACK + BTN_CONFIRM) → logical Back
-      return (gpio.*fn)(HalGPIO::BTN_BACK) || (gpio.*fn)(HalGPIO::BTN_CONFIRM);
+      return (gpio.*fn)(SETTINGS.frontButtonBack);
     case Button::Confirm:
-      // Front RIGHT cluster (BTN_LEFT + BTN_RIGHT) → logical Select/Confirm
-      return (gpio.*fn)(HalGPIO::BTN_LEFT) || (gpio.*fn)(HalGPIO::BTN_RIGHT);
+      return (gpio.*fn)(SETTINGS.frontButtonConfirm);
     case Button::Left:
-      // Merged into Back cluster; no longer used as standalone logical button.
-      return false;
+      return (gpio.*fn)(SETTINGS.frontButtonLeft);
     case Button::Right:
-      // Merged into Confirm cluster; no longer used as standalone logical button.
-      return false;
+      return (gpio.*fn)(SETTINGS.frontButtonRight);
     case Button::Up:
       return (gpio.*fn)(HalGPIO::BTN_UP);
     case Button::Down:

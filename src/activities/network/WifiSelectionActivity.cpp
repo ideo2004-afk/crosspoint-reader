@@ -524,6 +524,16 @@ void WifiSelectionActivity::render(Activity::RenderLock&&) {
       break;
   }
 
+  // Draw situational hints
+  if (state == WifiSelectionState::AUTO_CONNECTING || state == WifiSelectionState::SCANNING || state == WifiSelectionState::CONNECTING) {
+    GUI.drawButtonHints(renderer, tr(STR_BACK), "", "", "");
+  } else if (state == WifiSelectionState::NETWORK_LIST) {
+    GUI.drawButtonHints(renderer, tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
+  } else {
+    // For prompts and other states, standard Back/OK hints
+    GUI.drawButtonHints(renderer, tr(STR_BACK), tr(STR_OK_BUTTON), "", "");
+  }
+
   renderer.displayBuffer();
 }
 

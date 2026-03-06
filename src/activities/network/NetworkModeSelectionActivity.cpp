@@ -83,5 +83,7 @@ void NetworkModeSelectionActivity::render(Activity::RenderLock&&) {
       [](int index) { return std::string(I18N.get(menuItems[index])); },
       [](int index) { return std::string(I18N.get(menuDescs[index])); }, [](int index) { return menuIcons[index]; });
 
+  GUI.drawButtonHints(renderer, tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
+
   renderer.displayBuffer();
 }

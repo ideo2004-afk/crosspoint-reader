@@ -222,7 +222,8 @@ void CalibreConnectActivity::render(Activity::RenderLock&&) {
                                    EpdFontFamily::REGULAR);
       renderer.drawText(SMALL_FONT_ID, metrics.contentSidePadding, y, msg.c_str());
     }
-
+    GUI.drawButtonHints(renderer, tr(STR_BACK), "", "", "");
   }
+
   renderer.displayBuffer();
 }

@@ -187,52 +187,26 @@ void HomeActivity::loop() {
   // [ 2 1 3 ] -> Right -> [ 1 3 4 ]
   // [ B2 B1 B3 ] -> Left -> [ B4 B2 B1 ]
 
-  // Side buttons (4, 5) for book cycling
-  if (mappedInput.wasPressedRaw(4)) { // UP -> Next
+  // Side buttons (usually physical 4 and 5) - Strictly for book covers
+  if (mappedInput.wasReleasedRaw(HalGPIO::BTN_UP) || mappedInput.wasReleasedRaw(4)) { 
     if (bookCount > 0) {
-      focusZone = Zone::BOOKS;
+      focusZone = Zone::BOOKS; // Jump focus to books zone when side buttons are used
       bookSelectorIndex = getNextBookIdx(bookSelectorIndex, bookCount);
       requestUpdate();
     }
   }
-  if (mappedInput.wasPressedRaw(5)) { // DOWN -> Previous
+  if (mappedInput.wasReleasedRaw(HalGPIO::BTN_DOWN) || mappedInput.wasReleasedRaw(5)) {
     if (bookCount > 0) {
-      focusZone = Zone::BOOKS;
+      focusZone = Zone::BOOKS; // Jump focus to books zone when side buttons are used
       bookSelectorIndex = getPrevBookIdx(bookSelectorIndex, bookCount);
       requestUpdate();
     }
   }
 
-  // Left Cluster Left/Right (0, 1) for focus/menu navigation
-  if (mappedInput.wasPressedRaw(0)) { // Cluster Left -> UP
-    if (focusZone == Zone::MENU) {
-      if (menuSelectorIndex == 0) {
-        focusZone = Zone::BOOKS;
-      } else {
-        menuSelectorIndex--;
-      }
-    } else if (focusZone == Zone::BOOKS) {
-      focusZone = Zone::MENU;
-      menuSelectorIndex = menuCount - 1; // Settings
-    }
-    requestUpdate();
-  }
-  if (mappedInput.wasPressedRaw(1)) { // Cluster Right -> DOWN
-    if (focusZone == Zone::BOOKS) {
-      focusZone = Zone::MENU;
-      menuSelectorIndex = 0;
-    } else if (focusZone == Zone::MENU) {
-      if (menuSelectorIndex < menuCount - 1) {
-        menuSelectorIndex++;
-      } else {
-        focusZone = Zone::BOOKS;
-      }
-    }
-    requestUpdate();
-  }
-
-  // Use "右下前端" (Cluster Right: 2, 3) for Confirmation
-  if (mappedInput.wasPressedRaw(2) || mappedInput.wasPressedRaw(3)) {
+  // Front buttons (Logical 1-to-1 mapping)
+  
+  // Button 2 (Confirm) - Selection
+  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     int idx = 0;
     const int myLibraryIdx = idx++;
     const int pluginsIdx = idx++;
@@ -252,6 +226,43 @@ void HomeActivity::loop() {
         onSettingsOpen();
       }
     }
+    return;
+  }
+
+  // Button 3 (Up) - Vertical movement
+  if (mappedInput.wasReleased(MappedInputManager::Button::Left)) { 
+    if (focusZone == Zone::MENU) {
+      if (menuSelectorIndex > 0) {
+        menuSelectorIndex--;
+      } else {
+        // Move focus up to books zone
+        focusZone = Zone::BOOKS;
+      }
+      requestUpdate();
+    }
+    // Note: If already in Zone::BOOKS, Up could potentially do nothing or loop. 
+    // Staying consistent with the "top" of the page.
+  }
+
+  // Button 4 (Down) - Vertical movement
+  if (mappedInput.wasReleased(MappedInputManager::Button::Right)) {
+    if (focusZone == Zone::BOOKS) {
+      // Move focus down to menu zone
+      focusZone = Zone::MENU;
+      menuSelectorIndex = 0;
+      requestUpdate();
+    } else if (focusZone == Zone::MENU) {
+      if (menuSelectorIndex < menuCount - 1) {
+        menuSelectorIndex++;
+        requestUpdate();
+      }
+    }
+  }
+
+  // Button 1 (Back) - Default Home behavior
+  if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
+    // On home, Back usually doesn't do much unless it exits popups.
+    // For now, no-op or specific home action.
   }
 }
 
@@ -287,12 +298,11 @@ void HomeActivity::render(Activity::RenderLock&&) {
   GUI.drawButtonMenu(
       renderer,
       Rect{0, menuY, pageWidth,
-           pageHeight - (menuY + metrics.buttonHintsHeight)},
+           pageHeight - menuY - metrics.verticalSpacing},
       static_cast<int>(menuItems.size()), focusZone == Zone::MENU ? menuSelectorIndex : -1,
       [&menuItems](int index) { return std::string(menuItems[index]); },
       [&menuIcons](int index) { return menuIcons[index]; });
 
-  // No button hints on home screen
   renderer.displayBuffer();
 
   if (!firstRenderDone) {

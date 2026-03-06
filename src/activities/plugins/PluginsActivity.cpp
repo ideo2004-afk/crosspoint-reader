@@ -59,10 +59,12 @@ void PluginsActivity::render(Activity::RenderLock&&) {
   GUI.drawButtonMenu(
       renderer,
       Rect{0, metrics.headerHeight + metrics.verticalSpacing, pageWidth,
-           pageHeight - (metrics.headerHeight + metrics.verticalSpacing)},
+           pageHeight - (metrics.headerHeight + metrics.verticalSpacing + metrics.buttonHintsHeight + metrics.verticalSpacing)},
       static_cast<int>(menuItems.size()), menuSelectorIndex,
       [&menuItems](int index) { return std::string(menuItems[index]); },
       [&menuIcons](int index) { return menuIcons[index]; });
+
+  GUI.drawButtonHints(renderer, tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
 
   renderer.displayBuffer();
 }
