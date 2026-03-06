@@ -74,9 +74,22 @@ void XtcReaderActivity::onExit() {
 }
 
 void XtcReaderActivity::loop() {
+  ActivityWithSubactivity::loop();
+  
   // Pass input responsibility to sub activity if exists
   if (subActivity) {
-    subActivity->loop();
+    return;
+  }
+
+  // Skip button processing after returning from subactivity
+  if (skipNextButtonCheck) {
+    const bool confirmReleased = !mappedInput.isPressed(MappedInputManager::Button::Confirm) &&
+                                 !mappedInput.wasReleased(MappedInputManager::Button::Confirm);
+    const bool backReleased = !mappedInput.isPressed(MappedInputManager::Button::Back) &&
+                              !mappedInput.wasReleased(MappedInputManager::Button::Back);
+    if (confirmReleased && backReleased) {
+      skipNextButtonCheck = false;
+    }
     return;
   }
 
@@ -203,7 +216,8 @@ void XtcReaderActivity::loop() {
   } else if (sideDownLong) {
     toggleBookmark();
     return;
-  } else if (frontRightShort || sideUpShort)  skipAmount = 1;
+  }
+ else if (frontRightShort || sideUpShort)  skipAmount = 1;
   else if (frontLeftShort  || sideDownShort) skipAmount = -1;
 
   if (skipAmount == 0) return;

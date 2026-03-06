@@ -24,6 +24,7 @@ class XtcReaderActivity final : public ActivityWithSubactivity {
   bool inMenu = false;
   int menuSelectedIndex = 0;
   bool pendingScreenshot = false;
+  bool skipNextButtonCheck = false;
   uint8_t* pageBuffer = nullptr;
   size_t pageBufferCapacity = 0;
 

@@ -130,9 +130,12 @@ void EpubReaderActivity::onExit() {
 }
 
 void EpubReaderActivity::loop() {
+  // Handle pending subactivities from base class
+  ActivityWithSubactivity::loop();
+
   // Pass input responsibility to sub activity if exists
   if (subActivity) {
-    subActivity->loop();
+    // subActivity->loop() is already called by the base class loop() above.
     // Deferred exit: process after subActivity->loop() returns to avoid use-after-free
     if (pendingSubactivityExit) {
       pendingSubactivityExit = false;
