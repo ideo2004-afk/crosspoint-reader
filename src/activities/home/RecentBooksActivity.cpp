@@ -95,6 +95,7 @@ void RecentBooksActivity::onEnter() {
   loadRecentBooks();
 
   selectorIndex = 0;
+  skipNextButtonCheck = true;
   requestUpdate();
 }
 
@@ -104,6 +105,13 @@ void RecentBooksActivity::onExit() {
 }
 
 void RecentBooksActivity::loop() {
+  if (skipNextButtonCheck) {
+    if (!mappedInput.isAnyPressed() && !mappedInput.wasAnyReleased()) {
+      skipNextButtonCheck = false;
+    }
+    return;
+  }
+
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     if (!recentBooks.empty() && selectorIndex < static_cast<int>(recentBooks.size())) {
       LOG_DBG("RBA", "Selected recent book: %s", recentBooks[selectorIndex].path.c_str());

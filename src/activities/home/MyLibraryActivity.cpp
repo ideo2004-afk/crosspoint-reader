@@ -107,7 +107,7 @@ void MyLibraryActivity::onEnter() {
 
   loadFiles();
   selectorIndex = 0;
-
+  skipNextButtonCheck = true;
   requestUpdate();
 }
 
@@ -117,6 +117,13 @@ void MyLibraryActivity::onExit() {
 }
 
 void MyLibraryActivity::loop() {
+  if (skipNextButtonCheck) {
+    if (!mappedInput.isAnyPressed() && !mappedInput.wasAnyReleased()) {
+      skipNextButtonCheck = false;
+    }
+    return;
+  }
+
   // Long press BACK (1s+) goes to root folder
   if (mappedInput.isPressed(MappedInputManager::Button::Back) && mappedInput.getHeldTime() >= GO_HOME_MS &&
       basepath != "/") {

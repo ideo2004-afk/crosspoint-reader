@@ -56,15 +56,15 @@ class WifiSelectionActivity final : public ActivityWithSubactivity {
   // Connection result
   std::string connectedIP;
   std::string connectionError;
+  bool skipNextButtonCheck = false;
+  // Whether network was connected using a saved password (skip save prompt)
+  bool usedSavedPassword = false;
 
   // Password to potentially save (from keyboard or saved credentials)
   std::string enteredPassword;
 
   // Cached MAC address string for display
   std::string cachedMacAddress;
-
-  // Whether network was connected using a saved password (skip save prompt)
-  bool usedSavedPassword = false;
 
   // Whether to attempt auto-connect on entry
   const bool allowAutoConnect;

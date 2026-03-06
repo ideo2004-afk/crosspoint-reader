@@ -16,14 +16,20 @@ void NetworkModeSelectionActivity::onEnter() {
 
   // Reset selection
   selectedIndex = 0;
-
-  // Trigger first update
+  skipNextButtonCheck = true;
   requestUpdate();
 }
 
 void NetworkModeSelectionActivity::onExit() { Activity::onExit(); }
 
 void NetworkModeSelectionActivity::loop() {
+  if (skipNextButtonCheck) {
+    if (!mappedInput.isAnyPressed() && !mappedInput.wasAnyReleased()) {
+      skipNextButtonCheck = false;
+    }
+    return;
+  }
+
   // Handle back button - cancel
   if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
     onCancel();

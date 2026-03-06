@@ -99,8 +99,8 @@ void CalibreConnectActivity::stopWebServer() {
 }
 
 void CalibreConnectActivity::loop() {
+  ActivityWithSubactivity::loop();
   if (subActivity) {
-    subActivity->loop();
     return;
   }
 

@@ -13,6 +13,13 @@ bool HalGPIO::isPressed(uint8_t buttonIndex) const { return inputMgr.isPressed(b
 
 bool HalGPIO::wasPressed(uint8_t buttonIndex) const { return inputMgr.wasPressed(buttonIndex); }
 
+bool HalGPIO::isAnyPressed() const {
+  for (uint8_t i = 0; i <= BTN_POWER; i++) {
+    if (isPressed(i)) return true;
+  }
+  return false;
+}
+
 bool HalGPIO::wasAnyPressed() const { return inputMgr.wasAnyPressed(); }
 
 bool HalGPIO::wasReleased(uint8_t buttonIndex) const { return inputMgr.wasReleased(buttonIndex); }

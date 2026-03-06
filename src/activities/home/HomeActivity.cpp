@@ -173,9 +173,6 @@ void HomeActivity::loop() {
   const int bookCount = recentBooks.size();
   const int menuCount = 4;
 
-  // Debounce/Cooldown (E-ink is slow, prevent multiple triggers)
-  if (millis() - lastInputMs < 100) return;
-
   auto getNextBookIdx = [](int cur, int total) {
     if (total <= 1) return 0;
     return (cur + 1) % total;
@@ -190,27 +187,24 @@ void HomeActivity::loop() {
   // [ 2 1 3 ] -> Right -> [ 1 3 4 ]
   // [ B2 B1 B3 ] -> Left -> [ B4 B2 B1 ]
 
-  // Use "左下按鍵" (Cluster Left: 0, 1) for book cycling
-  if (mappedInput.wasPressedRaw(0)) { // LEFT Cluster Left
+  // Side buttons (4, 5) for book cycling
+  if (mappedInput.wasPressedRaw(4)) { // UP -> Next
     if (bookCount > 0) {
-      lastInputMs = millis();
-      focusZone = Zone::BOOKS;
-      bookSelectorIndex = getPrevBookIdx(bookSelectorIndex, bookCount);
-      requestUpdate();
-    }
-  }
-  if (mappedInput.wasPressedRaw(1)) { // LEFT Cluster Right
-    if (bookCount > 0) {
-      lastInputMs = millis();
       focusZone = Zone::BOOKS;
       bookSelectorIndex = getNextBookIdx(bookSelectorIndex, bookCount);
       requestUpdate();
     }
   }
+  if (mappedInput.wasPressedRaw(5)) { // DOWN -> Previous
+    if (bookCount > 0) {
+      focusZone = Zone::BOOKS;
+      bookSelectorIndex = getPrevBookIdx(bookSelectorIndex, bookCount);
+      requestUpdate();
+    }
+  }
 
-  // Use Side buttons (4, 5) for focus/menu navigation
-  if (mappedInput.wasPressedRaw(4)) { // UP
-    lastInputMs = millis();
+  // Left Cluster Left/Right (0, 1) for focus/menu navigation
+  if (mappedInput.wasPressedRaw(0)) { // Cluster Left -> UP
     if (focusZone == Zone::MENU) {
       if (menuSelectorIndex == 0) {
         focusZone = Zone::BOOKS;
@@ -223,8 +217,7 @@ void HomeActivity::loop() {
     }
     requestUpdate();
   }
-  if (mappedInput.wasPressedRaw(5)) { // DOWN
-    lastInputMs = millis();
+  if (mappedInput.wasPressedRaw(1)) { // Cluster Right -> DOWN
     if (focusZone == Zone::BOOKS) {
       focusZone = Zone::MENU;
       menuSelectorIndex = 0;
@@ -240,7 +233,6 @@ void HomeActivity::loop() {
 
   // Use "右下前端" (Cluster Right: 2, 3) for Confirmation
   if (mappedInput.wasPressedRaw(2) || mappedInput.wasPressedRaw(3)) {
-    lastInputMs = millis();
     int idx = 0;
     const int myLibraryIdx = idx++;
     const int pluginsIdx = idx++;

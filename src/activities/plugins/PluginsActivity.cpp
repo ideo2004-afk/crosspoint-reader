@@ -5,10 +5,18 @@
 void PluginsActivity::onEnter() {
   Activity::onEnter();
   menuSelectorIndex = 0;
+  skipNextButtonCheck = true;
   requestUpdate();
 }
 
 void PluginsActivity::loop() {
+  if (skipNextButtonCheck) {
+    if (!mappedInput.isAnyPressed() && !mappedInput.wasAnyReleased()) {
+      skipNextButtonCheck = false;
+    }
+    return;
+  }
+
   if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
     onGoHome();
     return;

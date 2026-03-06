@@ -58,6 +58,12 @@ void FlowTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
     bool hasSelection = (selectorIndex >= 0 && selectorIndex < count);
     int curIdx = hasSelection ? selectorIndex : (selectorIndex >= 1000 ? (selectorIndex - 1000) : 0);
     if (curIdx >= count) curIdx = 0;
+
+    if (bufferRestored) {
+      coverRendered = true;
+      coverBufferStored = true;
+      return;
+    }
     
     // Per user request: [ 2 1 3 ] order
     // We want to show up to 2 side covers
@@ -170,7 +176,7 @@ void FlowTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
     }
     
     coverRendered = true;
-    coverBufferStored = false; 
+    coverBufferStored = true; 
 
   } else {
     drawEmptyRecents(renderer, rect);

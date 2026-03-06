@@ -18,6 +18,7 @@ class RecentBooksActivity final : public Activity {
   const std::function<void(const std::string& path)> onSelectBook;
   const std::function<void()> onGoHome;
 
+  bool skipNextButtonCheck = false;
   bool recentsLoading = false;
   bool recentsLoaded = false;
   bool firstRenderDone = false;

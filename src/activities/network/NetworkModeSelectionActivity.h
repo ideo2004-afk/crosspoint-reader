@@ -21,8 +21,8 @@ class NetworkModeSelectionActivity final : public Activity {
   ButtonNavigator buttonNavigator;
 
   int selectedIndex = 0;
-
-  const std::function<void(NetworkMode)> onModeSelected;
+  bool skipNextButtonCheck = false;
+  const std::function<void(const NetworkMode mode)> onModeSelected;
   const std::function<void()> onCancel;
 
  public:

@@ -44,8 +44,8 @@ void EpubReaderChapterSelectionActivity::onEnter() {
 void EpubReaderChapterSelectionActivity::onExit() { ActivityWithSubactivity::onExit(); }
 
 void EpubReaderChapterSelectionActivity::loop() {
+  ActivityWithSubactivity::loop();
   if (subActivity) {
-    subActivity->loop();
     return;
   }
 

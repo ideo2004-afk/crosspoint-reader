@@ -259,9 +259,9 @@ void CrossPointWebServerActivity::stopWebServer() {
 }
 
 void CrossPointWebServerActivity::loop() {
+  ActivityWithSubactivity::loop();
   if (subActivity) {
     // Forward loop to subactivity
-    subActivity->loop();
     return;
   }
 

@@ -8,6 +8,7 @@
 class PluginsActivity final : public Activity {
  private:
   int menuSelectorIndex = 0;
+  bool skipNextButtonCheck = false;
   const std::function<void()> onGoHome;
   const std::function<void()> onFlashcardOpen;
   const std::function<void()> onQubicOpen;

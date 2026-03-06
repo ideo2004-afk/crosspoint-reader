@@ -43,6 +43,7 @@ void WifiSelectionActivity::onEnter() {
   snprintf(macStr, sizeof(macStr), "%s %02x-%02x-%02x-%02x-%02x-%02x", tr(STR_MAC_ADDRESS), mac[0], mac[1], mac[2],
            mac[3], mac[4], mac[5]);
   cachedMacAddress = std::string(macStr);
+  skipNextButtonCheck = true;
 
   // Trigger first update to show scanning message
   requestUpdate();
@@ -291,8 +292,15 @@ void WifiSelectionActivity::checkConnectionStatus() {
 }
 
 void WifiSelectionActivity::loop() {
+  ActivityWithSubactivity::loop();
+  if (skipNextButtonCheck) {
+    if (!mappedInput.isAnyPressed() && !mappedInput.wasAnyReleased()) {
+      skipNextButtonCheck = false;
+    }
+    return;
+  }
+
   if (subActivity) {
-    subActivity->loop();
     return;
   }
 

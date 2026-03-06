@@ -15,8 +15,8 @@ void EpubReaderMenuActivity::onEnter() {
 void EpubReaderMenuActivity::onExit() { ActivityWithSubactivity::onExit(); }
 
 void EpubReaderMenuActivity::loop() {
+  ActivityWithSubactivity::loop();
   if (subActivity) {
-    subActivity->loop();
     return;
   }
 
