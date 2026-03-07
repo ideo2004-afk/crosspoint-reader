@@ -123,8 +123,6 @@ void BaseTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
     // Only draw if the label is non-empty
     if (labels[i] != nullptr && labels[i][0] != '\0') {
       const int x = buttonPositions[i];
-      renderer.fillRect(x, pageHeight - buttonY, buttonWidth, buttonHeight, false);
-      renderer.drawRect(x, pageHeight - buttonY, buttonWidth, buttonHeight);
       const int textWidth = renderer.getTextWidth(UI_10_FONT_ID, labels[i]);
       const int textX = x + (buttonWidth - 1 - textWidth) / 2;
       renderer.drawText(UI_10_FONT_ID, textX, pageHeight - buttonY + textYOffset, labels[i]);
@@ -147,25 +145,8 @@ void BaseTheme::drawSideButtonHints(const GfxRenderer& renderer, const char* top
   // Draw the shared border for both buttons as one unit
   const int x = screenWidth - buttonX - buttonWidth;
 
-  // Draw top button outline (3 sides, bottom open)
-  if (topBtn != nullptr && topBtn[0] != '\0') {
-    renderer.drawLine(x, topButtonY, x + buttonWidth - 1, topButtonY);                                       // Top
-    renderer.drawLine(x, topButtonY, x, topButtonY + buttonHeight - 1);                                      // Left
-    renderer.drawLine(x + buttonWidth - 1, topButtonY, x + buttonWidth - 1, topButtonY + buttonHeight - 1);  // Right
-  }
-
-  // Draw shared middle border
+  // shared middle border removed
   if ((topBtn != nullptr && topBtn[0] != '\0') || (bottomBtn != nullptr && bottomBtn[0] != '\0')) {
-    renderer.drawLine(x, topButtonY + buttonHeight, x + buttonWidth - 1, topButtonY + buttonHeight);  // Shared border
-  }
-
-  // Draw bottom button outline (3 sides, top is shared)
-  if (bottomBtn != nullptr && bottomBtn[0] != '\0') {
-    renderer.drawLine(x, topButtonY + buttonHeight, x, topButtonY + 2 * buttonHeight - 1);  // Left
-    renderer.drawLine(x + buttonWidth - 1, topButtonY + buttonHeight, x + buttonWidth - 1,
-                      topButtonY + 2 * buttonHeight - 1);  // Right
-    renderer.drawLine(x, topButtonY + 2 * buttonHeight - 1, x + buttonWidth - 1,
-                      topButtonY + 2 * buttonHeight - 1);  // Bottom
   }
 
   // Draw text for each button

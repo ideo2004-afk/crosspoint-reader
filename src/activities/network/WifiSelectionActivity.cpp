@@ -526,12 +526,15 @@ void WifiSelectionActivity::render(Activity::RenderLock&&) {
 
   // Draw situational hints
   if (state == WifiSelectionState::AUTO_CONNECTING || state == WifiSelectionState::SCANNING || state == WifiSelectionState::CONNECTING) {
-    GUI.drawButtonHints(renderer, tr(STR_BACK), "", "", "");
+    const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
   } else if (state == WifiSelectionState::NETWORK_LIST) {
-    GUI.drawButtonHints(renderer, tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
+    const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
   } else {
     // For prompts and other states, standard Back/OK hints
-    GUI.drawButtonHints(renderer, tr(STR_BACK), tr(STR_OK_BUTTON), "", "");
+    const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_OK_BUTTON), "", "");
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
   }
 
   renderer.displayBuffer();

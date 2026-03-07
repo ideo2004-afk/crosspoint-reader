@@ -289,7 +289,7 @@ void HomeActivity::render(Activity::RenderLock&&) {
                           recentBooks, compatibleSelectorIndex, coverRendered, coverBufferStored, bufferRestored,
                           std::bind(&HomeActivity::storeCoverBuffer, this));
 
-  std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), "App Plugins",
+  std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), "Plugins",
                                         tr(STR_FILE_TRANSFER), tr(STR_SETTINGS_TITLE)};
   std::vector<UIIcon> menuIcons = {Folder, Library, Transfer, Settings};
 
