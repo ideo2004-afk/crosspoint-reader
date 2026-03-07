@@ -46,7 +46,9 @@ void cutRoundedCorners(GfxRenderer& renderer, int x, int y, int w, int h, int r)
 
 void FlowTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std::vector<RecentBook>& recentBooks,
                                    const int selectorIndex, bool& coverRendered, bool& coverBufferStored,
-                                   bool& bufferRestored, std::function<bool()> storeCoverBuffer) const {
+                                   bool& bufferRestored, std::function<bool()> storeCoverBuffer,
+                                   const char* btn1, const char* btn2, const char* btn3,
+                                   const char* btn4) const {
   const bool hasRecentBooks = !recentBooks.empty();
   const int pageWidth = renderer.getScreenWidth();
   const int centerY = rect.y + 60;
@@ -182,8 +184,11 @@ void FlowTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
     drawEmptyRecents(renderer, rect);
   }
   
-  // Also draw the footer (Total Reading Time)
-  drawFooter(renderer);
+    // Also draw the footer (Total Reading Time)
+    drawFooter(renderer);
+
+    // Add button hints for Home navigation in Flow theme
+    drawButtonHints(renderer, nullptr, btn2, btn3, btn4);
 }
 
 void FlowTheme::drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCount, int selectedIndex,
@@ -237,6 +242,6 @@ void FlowTheme::drawFooter(GfxRenderer& renderer) const {
     char timeStr[64];
     snprintf(timeStr, sizeof(timeStr), "You have read for %uh %um", hours, minutes);
     
-    int textWidth = renderer.getTextWidth(UI_10_FONT_ID, timeStr);
-    renderer.drawText(UI_10_FONT_ID, (pageWidth - textWidth) / 2, pageHeight - 38, timeStr, Color::Black);
+    int textWidth = renderer.getTextWidth(SMALL_FONT_ID, timeStr);
+    renderer.drawText(SMALL_FONT_ID, (pageWidth - textWidth) / 2, 16, timeStr, Color::Black);
 }

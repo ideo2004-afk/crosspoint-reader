@@ -20,7 +20,9 @@ int coverWidth = 0;
 
 void Lyra3CoversTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std::vector<RecentBook>& recentBooks,
                                            const int selectorIndex, bool& coverRendered, bool& coverBufferStored,
-                                           bool& bufferRestored, std::function<bool()> storeCoverBuffer) const {
+                                           bool& bufferRestored, std::function<bool()> storeCoverBuffer,
+                                           const char* btn1, const char* btn2, const char* btn3,
+                                           const char* btn4) const {
   const int tileWidth = (rect.width - 2 * Lyra3CoversMetrics::values.contentSidePadding) / 3;
   const int tileHeight = rect.height;
   const int bookTitleHeight = tileHeight - Lyra3CoversMetrics::values.homeCoverHeight - hPaddingInSelection;

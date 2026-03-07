@@ -324,7 +324,9 @@ void BaseTheme::drawTabBar(const GfxRenderer& renderer, const Rect rect, const s
 // TODO: Refactor method to make it cleaner, split into smaller methods
 void BaseTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std::vector<RecentBook>& recentBooks,
                                     const int selectorIndex, bool& coverRendered, bool& coverBufferStored,
-                                    bool& bufferRestored, std::function<bool()> storeCoverBuffer) const {
+                                    bool& bufferRestored, std::function<bool()> storeCoverBuffer,
+                                    const char* btn1, const char* btn2, const char* btn3,
+                                    const char* btn4) const {
   const bool hasContinueReading = !recentBooks.empty();
   const bool bookSelected = hasContinueReading && selectorIndex == 0;
 

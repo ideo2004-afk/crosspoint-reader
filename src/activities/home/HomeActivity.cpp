@@ -285,9 +285,11 @@ void HomeActivity::render(Activity::RenderLock&&) {
     compatibleSelectorIndex = 1000 + bookSelectorIndex;
   }
 
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
   GUI.drawRecentBookCover(renderer, Rect{0, metrics.homeTopPadding, pageWidth, metrics.homeCoverTileHeight},
                           recentBooks, compatibleSelectorIndex, coverRendered, coverBufferStored, bufferRestored,
-                          std::bind(&HomeActivity::storeCoverBuffer, this));
+                          std::bind(&HomeActivity::storeCoverBuffer, this),
+                          labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), "Plugins",
                                         tr(STR_FILE_TRANSFER), tr(STR_SETTINGS_TITLE)};

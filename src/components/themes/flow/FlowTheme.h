@@ -40,7 +40,9 @@ class FlowTheme : public LyraTheme {
  public:
   void drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std::vector<RecentBook>& recentBooks,
                            const int selectorIndex, bool& coverRendered, bool& coverBufferStored, bool& bufferRestored,
-                           std::function<bool()> storeCoverBuffer) const override;
+                           std::function<bool()> storeCoverBuffer, const char* btn1 = nullptr,
+                           const char* btn2 = nullptr, const char* btn3 = nullptr,
+                           const char* btn4 = nullptr) const override;
 
   void drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCount, int selectedIndex,
                       const std::function<std::string(int index)>& buttonLabel,
