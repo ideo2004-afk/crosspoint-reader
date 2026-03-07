@@ -77,6 +77,10 @@ void FlashcardActivity::renderDeckMenu(bool fullRefresh) {
     }
     y += itemHeight + 10;
   }
+
+  const auto labels = mappedInput.mapLabels(tr(STR_MENU_HINT), tr(STR_LEARNED_HINT), tr(STR_RANDOM_HINT), tr(STR_FLIP_HINT));
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+
   renderer.displayBuffer(fullRefresh ? HalDisplay::FULL_REFRESH : HalDisplay::FAST_REFRESH);
 }
 
@@ -111,6 +115,9 @@ void FlashcardActivity::renderSubMenu() {
     }
   }
   
+  const auto labels = mappedInput.mapLabels(tr(STR_MENU_HINT), tr(STR_LEARNED_HINT), tr(STR_RANDOM_HINT), tr(STR_FLIP_HINT));
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+
   renderer.displayBuffer(HalDisplay::FAST_REFRESH);
   renderer.setOrientation(GfxRenderer::Orientation::Portrait);
 }
@@ -351,11 +358,8 @@ void FlashcardActivity::renderCard(int index, bool isBack, bool fullRefresh) {
       int y = (ph - bitmap.getHeight()) / 2;
       renderer.drawBitmap(bitmap, std::max(0, x), std::max(0, y), pw, ph);
       
-      // Grayscale Minimal UI Overlays (Small Font)
-      // black=false in drawText results in LightGray dither
-      
       // Top-left: Deck Name 
-      renderer.drawText(SMALL_FONT_ID, 30, 30, selectedDeckName.c_str(), Color::DarkGray); 
+      renderer.drawText(UI_10_FONT_ID, 30, 12, selectedDeckName.c_str(), Color::Black); 
       
       // Bottom-left: Consolidated Status
       char statusLine[64];
@@ -363,18 +367,13 @@ void FlashcardActivity::renderCard(int index, bool isBack, bool fullRefresh) {
       for (const auto& c : cards) if (c.learned) learnedCount++;
       snprintf(statusLine, sizeof(statusLine), "%d / %u | Learned: %d", 
                index + 1, (unsigned int)cards.size(), learnedCount);
-      renderer.drawText(SMALL_FONT_ID, 30, ph - 30, statusLine, Color::DarkGray);
+      renderer.drawText(UI_10_FONT_ID, 30, ph - 42, statusLine, Color::Black);
       
-      // Right edge: Rotated Button Hints (Plain text, rotated)
-      int hintX = pw - 30; // Safely away from the 800 edge
-      int hintY1 = 400;    // Top cluster (labels RANDOM / EXIT)
-      int hintY2 = 200;    // Bottom cluster (labels FLIP / LEARNED)
-      
-      renderer.drawTextRotated90CW(SMALL_FONT_ID, hintX, hintY1, "RANDOM / EXIT", Color::DarkGray);
-      renderer.drawTextRotated90CW(SMALL_FONT_ID, hintX, hintY2, "FLIP / LEARNED", Color::DarkGray);
+      renderer.setOrientation(GfxRenderer::Orientation::Portrait);
+      const auto labels = mappedInput.mapLabels(tr(STR_MENU_HINT), tr(STR_LEARNED_HINT), tr(STR_RANDOM_HINT), tr(STR_FLIP_HINT));
+      GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
       renderer.displayBuffer(fullRefresh ? HalDisplay::FULL_REFRESH : HalDisplay::FAST_REFRESH);
-      renderer.setOrientation(GfxRenderer::Orientation::Portrait);
     }
     file.close();
   }
@@ -385,71 +384,72 @@ void FlashcardActivity::loop() {
   const unsigned long longPressMs = 500;
 
   if (inDeckSelection) {
-    if (mappedInput.wasReleased(MappedInputManager::Button::Up)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Up) || mappedInput.wasReleased(MappedInputManager::Button::Right)) {
       deckSelectedIndex = (deckSelectedIndex - 1 + (int)decks.size()) % decks.size();
       renderDeckMenu(false);
-    } else if (mappedInput.wasReleased(MappedInputManager::Button::Down)) {
+    } else if (mappedInput.wasReleased(MappedInputManager::Button::Down) || mappedInput.wasReleased(MappedInputManager::Button::Left)) {
       deckSelectedIndex = (deckSelectedIndex + 1) % decks.size();
       renderDeckMenu(false);
-    } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Confirm)) {
+    } else if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
       inDeckSelection = false;
       loadFileList(decks[deckSelectedIndex]);
       showRandomCard();
-    } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Back)) {
+    } else if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
       if (onGoBack) onGoBack();
     }
     return;
   }
 
   if (inSubMenu) {
-    if (mappedInput.wasReleased(MappedInputManager::Button::Up)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Up) || mappedInput.wasReleased(MappedInputManager::Button::Right)) {
       subMenuSelectedIndex = (subMenuSelectedIndex - 1 + 5) % 5;
       renderSubMenu();
-    } else if (mappedInput.wasReleased(MappedInputManager::Button::Down)) {
+    } else if (mappedInput.wasReleased(MappedInputManager::Button::Down) || mappedInput.wasReleased(MappedInputManager::Button::Left)) {
       subMenuSelectedIndex = (subMenuSelectedIndex + 1) % 5;
       renderSubMenu();
-    } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Confirm)) {
+    } else if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
       inSubMenu = false;
       if (subMenuSelectedIndex == 0) { renderCard(currentIndex, isShowingBack, false); } 
       else if (subMenuSelectedIndex == 1) { showFirstCard(); } 
-      else if (subMenuSelectedIndex == 2) { inDeckSelection = true; renderDeckMenu(true); } 
+      else if (subMenuSelectedIndex == 2) { inDeckSelection = true; renderDeckMenu(false); } 
       else if (subMenuSelectedIndex == 3) { 
         for (auto& c : cards) { c.viewCount = 0; c.learned = false; }
         saveProgress();
         showRandomCard();
       }
       else if (subMenuSelectedIndex == 4) { if (onGoBack) onGoBack(); } 
-    } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Back)) {
+    } else if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
       inSubMenu = false;
       renderCard(currentIndex, isShowingBack, false);
     }
     return;
   }
 
-  // Vertical side buttons (Single buttons)
-  if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_UP, longPressMs)) jumpCards(-10);
-  else if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_DOWN, longPressMs)) jumpCards(10);
-  else if (mappedInput.wasShortPressedRaw(HalGPIO::BTN_UP, longPressMs)) showPrevCard();
-  else if (mappedInput.wasShortPressedRaw(HalGPIO::BTN_DOWN, longPressMs)) showNextCard();
+  // Side buttons navigation
+  if (mappedInput.wasReleased(MappedInputManager::Button::PageBack)) {
+    showPrevCard();
+  } else if (mappedInput.wasReleased(MappedInputManager::Button::PageForward)) {
+    showNextCard();
+  }
 
-  // Left Pair (BACK + CONFIRM) -> Random Card / Menu
-  bool leftPairLong = mappedInput.isLongPressed(MappedInputManager::Button::Back, longPressMs); // Using logical mapping which groups them
-  
-  if (mappedInput.wasLongPressed(MappedInputManager::Button::Back, longPressMs)) {
+  // Front buttons 1-to-1 logic
+  // BTN 1: Exit/Menu (Back)
+  if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
     renderer.storeBwBuffer();
     inSubMenu = true; 
     subMenuSelectedIndex = 0;
     renderSubMenu();
-  } 
-  else if (mappedInput.wasShortPressed(MappedInputManager::Button::Back, longPressMs)) {
+  }
+  // BTN 2: Learned (Confirm)
+  else if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+    markAsLearned();
+  }
+  // BTN 3: Random (Left)
+  else if (mappedInput.wasReleased(MappedInputManager::Button::Left)) {
     showRandomCard();
   }
-
-  // Right Pair (LEFT + RIGHT) -> Flip / Learned
-  if (mappedInput.wasLongPressed(MappedInputManager::Button::Confirm, longPressMs)) {
-    markAsLearned();
-  } 
-  else if (mappedInput.wasShortPressed(MappedInputManager::Button::Confirm, longPressMs)) {
+  // BTN 4: Flip (Right)
+  else if (mappedInput.wasReleased(MappedInputManager::Button::Right)) {
     toggleFlip();
   }
 }
