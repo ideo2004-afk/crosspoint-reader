@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include "fontIds.h"
 #include <HalDisplay.h>
+#include <I18n.h>
 #include "components/UITheme.h"
 
 QubicActivity::QubicActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::function<void()> onGoBack)
@@ -38,10 +39,10 @@ bool QubicActivity::handleInput() {
   
   // Handle Escape Menu Input
   if (inEscMenu) {
-      if (mappedInput.wasReleasedRaw(HalGPIO::BTN_UP)) {
+      if (mappedInput.wasReleased(MappedInputManager::Button::Up) || mappedInput.wasReleased(MappedInputManager::Button::Left)) {
           escMenuIndex = (escMenuIndex > 0) ? escMenuIndex - 1 : 4;
           moved = true;
-      } else if (mappedInput.wasReleasedRaw(HalGPIO::BTN_DOWN)) {
+      } else if (mappedInput.wasReleased(MappedInputManager::Button::Down) || mappedInput.wasReleased(MappedInputManager::Button::Right)) {
           escMenuIndex = (escMenuIndex < 4) ? escMenuIndex + 1 : 0;
           moved = true;
       } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Confirm)) {
@@ -62,33 +63,30 @@ bool QubicActivity::handleInput() {
           moved = true;
       }
       
-      if (mappedInput.wasLongPressedRaw(HalGPIO::BTN_BACK) || mappedInput.wasLongPressedRaw(HalGPIO::BTN_CONFIRM)) {
-          inEscMenu = false;
-          moved = true;
-      }
-      
       if (moved) renderBoard(false);
       return false;
   }
 
   // Side Buttons: Layer Selection
-  if (mappedInput.wasReleasedRaw(HalGPIO::BTN_UP)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::PageBack)) {
     cursorZ = (cursorZ > 0) ? cursorZ - 1 : 3;
     moved = true;
-  } else if (mappedInput.wasReleasedRaw(HalGPIO::BTN_DOWN)) {
+  } else if (mappedInput.wasReleased(MappedInputManager::Button::PageForward)) {
     cursorZ = (cursorZ < 3) ? cursorZ + 1 : 0;
     moved = true;
   }
   
-  // Bottom Left Cluster: Circular navigation within layer
+  // Front Button Mapping (1-to-1 Logic)
+  
+  // BTN 3 & BTN 4: Movement (Horizontal / Menu Up-Down)
   if (status == Playing) {
-      if (mappedInput.wasReleasedRaw(HalGPIO::BTN_LEFT)) {
+      if (mappedInput.wasReleased(MappedInputManager::Button::Left)) { // BTN 3 (Prompted as Random/Left in other activities)
           int idx = cursorY * 4 + cursorX;
           idx = (idx > 0) ? idx - 1 : 15;
           cursorX = idx % 4;
           cursorY = idx / 4;
           moved = true;
-      } else if (mappedInput.wasReleasedRaw(HalGPIO::BTN_RIGHT)) {
+      } else if (mappedInput.wasReleased(MappedInputManager::Button::Right)) { // BTN 4 (Prompted as Flip/Right)
           int idx = cursorY * 4 + cursorX;
           idx = (idx < 15) ? idx + 1 : 0;
           cursorX = idx % 4;
@@ -96,27 +94,21 @@ bool QubicActivity::handleInput() {
           moved = true;
       }
   } else {
-      if (mappedInput.wasReleasedRaw(HalGPIO::BTN_LEFT) || mappedInput.wasReleasedRaw(HalGPIO::BTN_RIGHT)) {
+      // Post-game navigation
+      if (mappedInput.wasReleased(MappedInputManager::Button::Left) || mappedInput.wasReleased(MappedInputManager::Button::Right)) {
           postGameMenuIndex = (postGameMenuIndex == 0) ? 1 : 0;
           moved = true;
       }
   }
   
-  // Bottom Right Cluster: Confirm / Menu
-  bool confirmPressed = mappedInput.wasShortPressedRaw(HalGPIO::BTN_BACK) || 
-                         mappedInput.wasShortPressedRaw(HalGPIO::BTN_CONFIRM);
-                         
-  bool menuLongPressed = mappedInput.wasLongPressedRaw(HalGPIO::BTN_LEFT) || 
-                          mappedInput.wasLongPressedRaw(HalGPIO::BTN_RIGHT);
-
-  if (menuLongPressed) {
+  // BTN 1: Menu
+  if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
       inEscMenu = true;
       escMenuIndex = 0;
-      renderBoard(false);
-      return false;
+      moved = true;
   }
-
-  if (confirmPressed) {
+  // BTN 2: Confirm / Place
+  else if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
       if (status != Playing) {
           if (postGameMenuIndex == 0) {
               onEnter();
@@ -128,7 +120,6 @@ bool QubicActivity::handleInput() {
       } else {
           int idx = cursorZ * 16 + cursorY * 4 + cursorX;
           if (engine.makeMove(idx, QubicEngine::Human)) {
-            renderBoard(false);
             QubicEngine::Player winner = engine.checkWinner();
             if (winner == QubicEngine::Human) {
               status = Won;
@@ -140,7 +131,7 @@ bool QubicActivity::handleInput() {
               isAiThinking = true;
               aiThinkStartTime = millis();
             }
-            renderBoard(false);
+            moved = true;
           }
       }
   }
@@ -272,12 +263,17 @@ void QubicActivity::renderBoard(bool fullRefresh) {
       }
       
   } else if (isAiThinking) {
-      renderer.drawText(UI_10_FONT_ID, 340, 750, "AI Thinking...");
+      renderer.drawText(SMALL_FONT_ID, 340, 700, "AI Thinking...");
   }
 
   // 6. Escape Menu Overlay
   if (inEscMenu) {
       renderEscMenu();
+  } else {
+      // Draw standard hints for the game
+      // tr(STR_MENU_HINT) -> «, tr(STR_CONFIRM) -> o, tr(STR_DIR_LEFT) -> <, tr(STR_DIR_RIGHT) -> >
+      const auto labels = mappedInput.mapLabels(tr(STR_MENU_HINT), tr(STR_LEARNED_HINT), tr(STR_RANDOM_HINT), tr(STR_FLIP_HINT));
+      GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
   }
 
   renderer.displayBuffer();
@@ -307,4 +303,8 @@ void QubicActivity::renderEscMenu() {
         bool blackText = (escMenuIndex != i);
         renderer.drawText(UI_12_FONT_ID, mx + 20, ry + 2, options[i], blackText, EpdFontFamily::REGULAR);
     }
+    
+    // Hints for the menu
+    const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_OK_BUTTON), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 }

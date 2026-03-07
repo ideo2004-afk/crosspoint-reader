@@ -384,10 +384,10 @@ void FlashcardActivity::loop() {
   const unsigned long longPressMs = 500;
 
   if (inDeckSelection) {
-    if (mappedInput.wasReleased(MappedInputManager::Button::Up) || mappedInput.wasReleased(MappedInputManager::Button::Right)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Up) || mappedInput.wasReleased(MappedInputManager::Button::Left)) {
       deckSelectedIndex = (deckSelectedIndex - 1 + (int)decks.size()) % decks.size();
       renderDeckMenu(false);
-    } else if (mappedInput.wasReleased(MappedInputManager::Button::Down) || mappedInput.wasReleased(MappedInputManager::Button::Left)) {
+    } else if (mappedInput.wasReleased(MappedInputManager::Button::Down) || mappedInput.wasReleased(MappedInputManager::Button::Right)) {
       deckSelectedIndex = (deckSelectedIndex + 1) % decks.size();
       renderDeckMenu(false);
     } else if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
@@ -401,10 +401,10 @@ void FlashcardActivity::loop() {
   }
 
   if (inSubMenu) {
-    if (mappedInput.wasReleased(MappedInputManager::Button::Up) || mappedInput.wasReleased(MappedInputManager::Button::Right)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Up) || mappedInput.wasReleased(MappedInputManager::Button::Left)) {
       subMenuSelectedIndex = (subMenuSelectedIndex - 1 + 5) % 5;
       renderSubMenu();
-    } else if (mappedInput.wasReleased(MappedInputManager::Button::Down) || mappedInput.wasReleased(MappedInputManager::Button::Left)) {
+    } else if (mappedInput.wasReleased(MappedInputManager::Button::Down) || mappedInput.wasReleased(MappedInputManager::Button::Right)) {
       subMenuSelectedIndex = (subMenuSelectedIndex + 1) % 5;
       renderSubMenu();
     } else if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
