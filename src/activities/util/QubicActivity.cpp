@@ -239,29 +239,44 @@ void QubicActivity::renderBoard(bool fullRefresh) {
       renderer.drawLine(c4.x, c4.y, c1.x, c1.y, 3, true);
   }
 
-  // 5. Status at bottom
+  // 5. Status & Post-game Menu
   if (status != Playing) {
-      if (status == Won) {
-          renderer.drawText(UI_12_FONT_ID, 20, 750, "VICTORY!", true, EpdFontFamily::BOLD);
-      } else if (status == Lost) {
-          renderer.drawText(UI_12_FONT_ID, 20, 750, "DEFEAT.", true, EpdFontFamily::BOLD);
-      } else if (status == Draw) {
-          renderer.drawText(UI_12_FONT_ID, 20, 750, "DRAW.", true, EpdFontFamily::BOLD);
-      }
+      int sw = renderer.getScreenWidth();
+      int sh = renderer.getScreenHeight();
+      int bw = 400;
+      int bh = 150;
+      int bx = (sw - bw) / 2;
+      int by = (sh - bh) / 2;
+
+      // Draw overlay box
+      renderer.fillRoundedRect(bx, by, bw, bh, 15, Color::White);
+      renderer.drawRoundedRect(bx, by, bw, bh, 3, 15, true);
+
+      // Result Text
+      const char* resultStr = (status == Won) ? "VICTORY!" : (status == Lost) ? "DEFEAT." : "DRAW.";
+      renderer.drawCenteredText(UI_12_FONT_ID, by + 30, resultStr, true, EpdFontFamily::BOLD);
       
-      // Post-game Pills: New / Exit
-      for (int i=0; i<2; i++) {
-          int bx = 180 + (i * 90);
-          int by = 744;
+      // Buttons
+      for (int i = 0; i < 2; i++) {
+          int btnW = 140;
+          int btnH = 60;
+          int btnX = bx + (bw / 4) + (i * (bw / 2)) - (btnW / 2);
+          int btnY = by + 75;
+
+          const char* label = (i == 0) ? "New" : "Exit";
+          int tw = renderer.getTextWidth(UI_12_FONT_ID, label);
+          int th = renderer.getTextHeight(UI_12_FONT_ID);
+          int tx = btnX + (btnW - tw) / 2;
+          int ty = btnY + (btnH - th) / 2;
+
           if (postGameMenuIndex == i) {
-              renderer.fillRoundedRect(bx - 10, by - 5, 80, 40, 10, true, true, false, false, Color::Black);
-              renderer.drawText(UI_12_FONT_ID, bx + 10, by + 10, (i == 0) ? "New" : "Exit", false, EpdFontFamily::REGULAR);
+              renderer.fillRoundedRect(btnX, btnY, btnW, btnH, 10, Color::Black);
+              renderer.drawText(UI_12_FONT_ID, tx, ty, label, Color::White, EpdFontFamily::REGULAR);
           } else {
-              renderer.drawRoundedRect(bx - 10, by - 5, 80, 40, 2, 10, true, true, false, false, true);
-              renderer.drawText(UI_12_FONT_ID, bx + 10, by + 10, (i == 0) ? "New" : "Exit", true, EpdFontFamily::REGULAR);
+              renderer.drawRoundedRect(btnX, btnY, btnW, btnH, 2, 10, true);
+              renderer.drawText(UI_12_FONT_ID, tx, ty, label, Color::Black, EpdFontFamily::REGULAR);
           }
       }
-      
   } else if (isAiThinking) {
       renderer.drawText(SMALL_FONT_ID, 340, 700, "AI Thinking...");
   }
