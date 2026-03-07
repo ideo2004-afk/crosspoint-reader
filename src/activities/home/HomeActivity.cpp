@@ -21,7 +21,7 @@
 #include "util/StringUtils.h"
 
 int HomeActivity::getMenuItemCount() const {
-  int count = 6;  // My Library, Recents, Flashcards, File transfer, Settings, Qubic
+  int count = 4;  // My Library, Recents, Plugins, Settings
   if (!recentBooks.empty()) {
     count += recentBooks.size();
   }
@@ -209,8 +209,8 @@ void HomeActivity::loop() {
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     int idx = 0;
     const int myLibraryIdx = idx++;
+    const int recentsIdx = idx++;
     const int pluginsIdx = idx++;
-    const int fileTransferIdx = idx++;
     const int settingsIdx = idx++;
 
     if (focusZone == Zone::BOOKS && !recentBooks.empty()) {
@@ -218,10 +218,10 @@ void HomeActivity::loop() {
     } else if (focusZone == Zone::MENU) {
       if (menuSelectorIndex == myLibraryIdx) {
         onMyLibraryOpen();
+      } else if (menuSelectorIndex == recentsIdx) {
+        onRecentsOpen();
       } else if (menuSelectorIndex == pluginsIdx) {
-        onPluginsOpen();
-      } else if (menuSelectorIndex == fileTransferIdx) {
-        onFileTransferOpen();
+        onFileTransferOpen(); // This goes to the new Plugins (transfer) page
       } else if (menuSelectorIndex == settingsIdx) {
         onSettingsOpen();
       }
@@ -298,9 +298,9 @@ void HomeActivity::render(Activity::RenderLock&&) {
                           std::bind(&HomeActivity::storeCoverBuffer, this),
                           labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
-  std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), "Plugins",
-                                        tr(STR_FILE_TRANSFER), tr(STR_SETTINGS_TITLE)};
-  std::vector<UIIcon> menuIcons = {Folder, Library, Transfer, Settings};
+  std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), tr(STR_RECENTS),
+                                        "Toolbox", tr(STR_SETTINGS_TITLE)};
+  std::vector<UIIcon> menuIcons = {Folder, Recent, Transfer, Settings};
 
   // Add 50px extra spacing below books (+50) for better visual separation
   int menuY = metrics.homeTopPadding + metrics.homeCoverTileHeight + metrics.verticalSpacing + 50;

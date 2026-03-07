@@ -556,6 +556,9 @@ void LyraTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
   } else {
     drawEmptyRecents(renderer, rect);
   }
+
+  // Restore button hints to Home screen
+  drawButtonHints(renderer, btn1, btn2, btn3, btn4);
 }
 
 void LyraTheme::drawEmptyRecents(const GfxRenderer& renderer, const Rect rect) const {

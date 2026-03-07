@@ -23,13 +23,21 @@ class NetworkModeSelectionActivity final : public Activity {
   int selectedIndex = 0;
   bool skipNextButtonCheck = false;
   const std::function<void(const NetworkMode mode)> onModeSelected;
+  const std::function<void()> onFlashcard;
+  const std::function<void()> onQubic;
   const std::function<void()> onCancel;
 
  public:
   explicit NetworkModeSelectionActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
                                         const std::function<void(NetworkMode)>& onModeSelected,
+                                        const std::function<void()>& onFlashcard,
+                                        const std::function<void()>& onQubic,
                                         const std::function<void()>& onCancel)
-      : Activity("NetworkModeSelection", renderer, mappedInput), onModeSelected(onModeSelected), onCancel(onCancel) {}
+      : Activity("NetworkModeSelection", renderer, mappedInput),
+        onModeSelected(onModeSelected),
+        onFlashcard(onFlashcard),
+        onQubic(onQubic),
+        onCancel(onCancel) {}
   void onEnter() override;
   void onExit() override;
   void loop() override;

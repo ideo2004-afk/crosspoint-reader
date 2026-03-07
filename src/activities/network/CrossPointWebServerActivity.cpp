@@ -50,6 +50,7 @@ void CrossPointWebServerActivity::onEnter() {
   LOG_DBG("WEBACT", "Launching NetworkModeSelectionActivity...");
   enterNewActivity(new NetworkModeSelectionActivity(
       renderer, mappedInput, [this](const NetworkMode mode) { onNetworkModeSelected(mode); },
+      onFlashcard, onQubic,
       [this]() { onGoBack(); }  // Cancel goes back to home
       ));
 }
@@ -117,6 +118,7 @@ void CrossPointWebServerActivity::onNetworkModeSelected(const NetworkMode mode) 
       state = WebServerActivityState::MODE_SELECTION;
       enterNewActivity(new NetworkModeSelectionActivity(
           renderer, mappedInput, [this](const NetworkMode nextMode) { onNetworkModeSelected(nextMode); },
+          onFlashcard, onQubic,
           [this]() { onGoBack(); }));
     }));
     return;
@@ -163,6 +165,7 @@ void CrossPointWebServerActivity::onWifiSelectionComplete(const bool connected) 
     state = WebServerActivityState::MODE_SELECTION;
     enterNewActivity(new NetworkModeSelectionActivity(
         renderer, mappedInput, [this](const NetworkMode mode) { onNetworkModeSelected(mode); },
+        onFlashcard, onQubic,
         [this]() { onGoBack(); }));
   }
 }
@@ -348,7 +351,7 @@ void CrossPointWebServerActivity::render(Activity::RenderLock&&) {
     const auto pageHeight = renderer.getScreenHeight();
 
     GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight},
-                   isApMode ? tr(STR_HOTSPOT_MODE) : tr(STR_FILE_TRANSFER), nullptr);
+                   isApMode ? tr(STR_HOTSPOT_MODE) : "Toolbox", nullptr);
 
     if (state == WebServerActivityState::SERVER_RUNNING) {
       GUI.drawSubHeader(renderer, Rect{0, metrics.topPadding + metrics.headerHeight, pageWidth, metrics.tabBarHeight},

@@ -27,7 +27,6 @@
 #include "activities/reader/ReaderActivity.h"
 #include "activities/settings/SettingsActivity.h"
 #include "activities/util/FlashcardActivity.h"
-#include "activities/plugins/PluginsActivity.h"
 #include "activities/util/FullScreenMessageActivity.h"
 #include "activities/util/QubicActivity.h"
 #include "components/UITheme.h"
@@ -247,21 +246,10 @@ void enterLightSleep() {
 void onGoHome();
 void onGoToMyLibraryWithPath(const std::string& path);
 void onGoToRecentBooks();
+
 void onGoToReader(const std::string& initialEpubPath) {
   const std::string bookPath = initialEpubPath;
   enterNewActivity(new ReaderActivity(renderer, mappedInputManager, bookPath, onGoHome, onGoToMyLibraryWithPath));
-}
-
-void onGoToFileTransfer() {
-  enterNewActivity(new CrossPointWebServerActivity(renderer, mappedInputManager, onGoHome));
-}
-
-void onGoToSettings() {
-  enterNewActivity(new SettingsActivity(renderer, mappedInputManager, onGoHome));
-}
-
-void onGoToQubic() {
-  enterNewActivity(new QubicActivity(renderer, mappedInputManager, onGoHome));
 }
 
 void onGoToMyLibrary() {
@@ -272,6 +260,10 @@ void onGoToRecentBooks() {
   enterNewActivity(new RecentBooksActivity(renderer, mappedInputManager, onGoHome, onGoToReader));
 }
 
+void onGoToSettings() {
+  enterNewActivity(new SettingsActivity(renderer, mappedInputManager, onGoHome));
+}
+
 void onGoToMyLibraryWithPath(const std::string& path) {
   enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader, path));
 }
@@ -280,13 +272,18 @@ void onGoToFlashcard() {
   enterNewActivity(new FlashcardActivity(renderer, mappedInputManager, onGoHome));
 }
 
+void onGoToQubic() {
+  enterNewActivity(new QubicActivity(renderer, mappedInputManager, onGoHome));
+}
+
 void onGoToPlugins() {
-  enterNewActivity(new PluginsActivity(renderer, mappedInputManager, onGoHome, onGoToFlashcard, onGoToQubic));
+  // Use the web server activity as the new Plugins/Transfer hub
+  enterNewActivity(new CrossPointWebServerActivity(renderer, mappedInputManager, onGoHome, onGoToFlashcard, onGoToQubic));
 }
 
 void onGoHome() {
   enterNewActivity(new HomeActivity(renderer, mappedInputManager, onGoToReader, onGoToMyLibrary, onGoToRecentBooks,
-                                     onGoToSettings, onGoToFileTransfer, onGoToPlugins));
+                                     onGoToSettings, onGoToPlugins, onGoToPlugins));
 }
 
 void setupDisplayAndFonts() {

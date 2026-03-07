@@ -126,7 +126,8 @@ void Lyra3CoversTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, con
       renderer.drawText(SMALL_FONT_ID, tileX + hPaddingInSelection,
                         tileY + tileHeight - bookTitleHeight + hPaddingInSelection + 5, title.c_str(), true);
     }
-  } else {
-    drawEmptyRecents(renderer, rect);
   }
+
+  // Restore button hints to Home screen
+  drawButtonHints(renderer, btn1, btn2, btn3, btn4);
 }
