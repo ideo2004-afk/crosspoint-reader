@@ -164,7 +164,7 @@ void FlowTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
             renderer.drawRoundedRect(drawX - 2, drawY - 2, centerCoverWidth + 4, centerCoverHeight + 4, 4, bookCornerRadius + 2, true);
         }
 
-        // Draw File Name below center cover
+        // Draw File Name
         std::string filename = recentBooks[curIdx].path;
         size_t lastSlash = filename.find_last_of('/');
         if (lastSlash != std::string::npos) filename = filename.substr(lastSlash + 1);
@@ -188,7 +188,7 @@ void FlowTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
     drawFooter(renderer);
 
     // Add button hints for Home navigation in Flow theme
-    drawButtonHints(renderer, nullptr, btn2, btn3, btn4);
+    drawButtonHints(renderer, btn1, btn2, btn3, btn4);
 }
 
 void FlowTheme::drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCount, int selectedIndex,

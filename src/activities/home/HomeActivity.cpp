@@ -295,8 +295,8 @@ void HomeActivity::render(Activity::RenderLock&&) {
                                         tr(STR_FILE_TRANSFER), tr(STR_SETTINGS_TITLE)};
   std::vector<UIIcon> menuIcons = {Folder, Library, Transfer, Settings};
 
-  // Add 30px extra spacing below books (+30) for better visual separation
-  int menuY = metrics.homeTopPadding + metrics.homeCoverTileHeight + metrics.verticalSpacing + 30;
+  // Add 50px extra spacing below books (+50) for better visual separation
+  int menuY = metrics.homeTopPadding + metrics.homeCoverTileHeight + metrics.verticalSpacing + 50;
   GUI.drawButtonMenu(
       renderer,
       Rect{0, menuY, pageWidth,
