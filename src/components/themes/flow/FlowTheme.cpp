@@ -174,7 +174,24 @@ void FlowTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
         auto truncatedTitle = renderer.truncatedText(BOOKERLY_14_FONT_ID, filename.c_str(), pageWidth - 40);
         int titleWidth = renderer.getTextWidth(BOOKERLY_14_FONT_ID, truncatedTitle.c_str());
         // Draw above covers (offset from rect.y)
-        renderer.drawText(BOOKERLY_14_FONT_ID, centerX - titleWidth / 2, rect.y + 15, truncatedTitle.c_str(), true);
+        int titleY = rect.y + 15;
+        renderer.drawText(BOOKERLY_14_FONT_ID, centerX - titleWidth / 2, titleY, truncatedTitle.c_str(), true);
+
+        // Draw reading time for THIS book below the title
+        uint32_t bookSeconds = 0;
+        auto it = READING_STATS.books.find(recentBooks[curIdx].path);
+        if (it != READING_STATS.books.end()) {
+            bookSeconds = it->second.readingSeconds;
+        }
+        
+        uint32_t hours = bookSeconds / 3600;
+        uint32_t minutes = (bookSeconds % 3600) / 60;
+        char timeStr[32];
+        snprintf(timeStr, sizeof(timeStr), "%uh %um", hours, minutes);
+        
+        int timeWidth = renderer.getTextWidth(SMALL_FONT_ID, timeStr);
+        // Draw below the center cover: centerY (rect.y + 60) + centerCoverHeight (314) + 8
+        renderer.drawText(SMALL_FONT_ID, centerX - timeWidth / 2, rect.y + 60 + 314 + 8, timeStr, Color::Black);
     }
     
     coverRendered = true;
@@ -184,8 +201,7 @@ void FlowTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
     drawEmptyRecents(renderer, rect);
   }
   
-    // Also draw the footer (Total Reading Time)
-    drawFooter(renderer);
+    // (drawFooter removed to move reading time per-book)
 
     // Add button hints for Home navigation in Flow theme
     drawButtonHints(renderer, btn1, btn2, btn3, btn4);
@@ -232,16 +248,5 @@ void FlowTheme::drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCount
 }
 
 void FlowTheme::drawFooter(GfxRenderer& renderer) const {
-    const int pageWidth = renderer.getScreenWidth();
-    const int pageHeight = renderer.getScreenHeight();
-    
-    uint32_t totalSeconds = READING_STATS.totalReadingSeconds;
-    uint32_t hours = totalSeconds / 3600;
-    uint32_t minutes = (totalSeconds % 3600) / 60;
-    
-    char timeStr[64];
-    snprintf(timeStr, sizeof(timeStr), "You have read for %uh %um", hours, minutes);
-    
-    int textWidth = renderer.getTextWidth(SMALL_FONT_ID, timeStr);
-    renderer.drawText(SMALL_FONT_ID, (pageWidth - textWidth) / 2, 16, timeStr, Color::Black);
+    // (Removed - moved to drawRecentBookCover for per-book stats)
 }
