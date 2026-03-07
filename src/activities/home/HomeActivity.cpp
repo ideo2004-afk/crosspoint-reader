@@ -239,9 +239,12 @@ void HomeActivity::loop() {
         focusZone = Zone::BOOKS;
       }
       requestUpdate();
+    } else if (focusZone == Zone::BOOKS) {
+      // Loop to bottom of menu
+      focusZone = Zone::MENU;
+      menuSelectorIndex = menuCount - 1;
+      requestUpdate();
     }
-    // Note: If already in Zone::BOOKS, Up could potentially do nothing or loop. 
-    // Staying consistent with the "top" of the page.
   }
 
   // Button 4 (Down) - Vertical movement
@@ -254,6 +257,10 @@ void HomeActivity::loop() {
     } else if (focusZone == Zone::MENU) {
       if (menuSelectorIndex < menuCount - 1) {
         menuSelectorIndex++;
+        requestUpdate();
+      } else {
+        // Loop back to books
+        focusZone = Zone::BOOKS;
         requestUpdate();
       }
     }

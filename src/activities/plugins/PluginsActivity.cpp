@@ -22,14 +22,14 @@ void PluginsActivity::loop() {
     return;
   }
 
-  if (mappedInput.wasReleased(MappedInputManager::Button::Up)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Up) || mappedInput.wasReleased(MappedInputManager::Button::Left)) {
     if (menuSelectorIndex > 0) {
       menuSelectorIndex--;
       requestUpdate();
     }
   }
 
-  if (mappedInput.wasReleased(MappedInputManager::Button::Down)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Down) || mappedInput.wasReleased(MappedInputManager::Button::Right)) {
     if (menuSelectorIndex < 1) { // 2 items for now
       menuSelectorIndex++;
       requestUpdate();
