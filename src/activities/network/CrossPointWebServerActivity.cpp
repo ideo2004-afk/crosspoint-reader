@@ -50,7 +50,7 @@ void CrossPointWebServerActivity::onEnter() {
   LOG_DBG("WEBACT", "Launching NetworkModeSelectionActivity...");
   enterNewActivity(new NetworkModeSelectionActivity(
       renderer, mappedInput, [this](const NetworkMode mode) { onNetworkModeSelected(mode); },
-      onFlashcard, onQubic,
+      onFlashcard, onQubic, onGoToMiniGo,
       [this]() { onGoBack(); }  // Cancel goes back to home
       ));
 }
@@ -118,7 +118,7 @@ void CrossPointWebServerActivity::onNetworkModeSelected(const NetworkMode mode) 
       state = WebServerActivityState::MODE_SELECTION;
       enterNewActivity(new NetworkModeSelectionActivity(
           renderer, mappedInput, [this](const NetworkMode nextMode) { onNetworkModeSelected(nextMode); },
-          onFlashcard, onQubic,
+          onFlashcard, onQubic, onGoToMiniGo,
           [this]() { onGoBack(); }));
     }));
     return;
@@ -165,7 +165,7 @@ void CrossPointWebServerActivity::onWifiSelectionComplete(const bool connected) 
     state = WebServerActivityState::MODE_SELECTION;
     enterNewActivity(new NetworkModeSelectionActivity(
         renderer, mappedInput, [this](const NetworkMode mode) { onNetworkModeSelected(mode); },
-        onFlashcard, onQubic,
+        onFlashcard, onQubic, onGoToMiniGo,
         [this]() { onGoBack(); }));
   }
 }

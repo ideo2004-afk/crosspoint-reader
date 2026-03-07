@@ -32,6 +32,7 @@ class CrossPointWebServerActivity final : public ActivityWithSubactivity {
   const std::function<void()> onGoBack;
   const std::function<void()> onFlashcard;
   const std::function<void()> onQubic;
+  const std::function<void()> onGoToMiniGo;
 
   // Network mode
   NetworkMode networkMode = NetworkMode::JOIN_NETWORK;
@@ -59,11 +60,13 @@ class CrossPointWebServerActivity final : public ActivityWithSubactivity {
   explicit CrossPointWebServerActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
                                        const std::function<void()>& onGoBack,
                                        const std::function<void()>& onFlashcard,
-                                       const std::function<void()>& onQubic)
+                                       const std::function<void()>& onQubic,
+                                       const std::function<void()>& onGoToMiniGo)
       : ActivityWithSubactivity("CrossPointWebServer", renderer, mappedInput),
         onGoBack(onGoBack),
         onFlashcard(onFlashcard),
-        onQubic(onQubic) {}
+        onQubic(onQubic),
+        onGoToMiniGo(onGoToMiniGo) {}
   void onEnter() override;
   void onExit() override;
   void loop() override;

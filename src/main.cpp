@@ -29,6 +29,7 @@
 #include "activities/util/FlashcardActivity.h"
 #include "activities/util/FullScreenMessageActivity.h"
 #include "activities/util/QubicActivity.h"
+#include "activities/util/MiniGoActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/ButtonNavigator.h"
@@ -276,9 +277,13 @@ void onGoToQubic() {
   enterNewActivity(new QubicActivity(renderer, mappedInputManager, onGoHome));
 }
 
+void onGoToMiniGo() {
+  enterNewActivity(new MiniGoActivity(renderer, mappedInputManager, onGoHome));
+}
+
 void onGoToPlugins() {
   // Use the web server activity as the new Plugins/Transfer hub
-  enterNewActivity(new CrossPointWebServerActivity(renderer, mappedInputManager, onGoHome, onGoToFlashcard, onGoToQubic));
+  enterNewActivity(new CrossPointWebServerActivity(renderer, mappedInputManager, onGoHome, onGoToFlashcard, onGoToQubic, onGoToMiniGo));
 }
 
 void onGoHome() {

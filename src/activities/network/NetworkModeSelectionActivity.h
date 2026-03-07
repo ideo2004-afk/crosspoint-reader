@@ -25,6 +25,7 @@ class NetworkModeSelectionActivity final : public Activity {
   const std::function<void(const NetworkMode mode)> onModeSelected;
   const std::function<void()> onFlashcard;
   const std::function<void()> onQubic;
+  const std::function<void()> onGoToMiniGo; // Added
   const std::function<void()> onCancel;
 
  public:
@@ -32,11 +33,13 @@ class NetworkModeSelectionActivity final : public Activity {
                                         const std::function<void(NetworkMode)>& onModeSelected,
                                         const std::function<void()>& onFlashcard,
                                         const std::function<void()>& onQubic,
+                                        const std::function<void()>& onGoToMiniGo, // Added
                                         const std::function<void()>& onCancel)
       : Activity("NetworkModeSelection", renderer, mappedInput),
         onModeSelected(onModeSelected),
         onFlashcard(onFlashcard),
         onQubic(onQubic),
+        onGoToMiniGo(onGoToMiniGo), // Added
         onCancel(onCancel) {}
   void onEnter() override;
   void onExit() override;

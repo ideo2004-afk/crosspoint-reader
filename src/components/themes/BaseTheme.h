@@ -62,7 +62,7 @@ struct ThemeMetrics {
   bool keyboardCenteredText;
 };
 
-enum UIIcon { Folder, Text, Image, Book, File, Recent, Settings, Transfer, Library, Wifi, Hotspot, Game };
+enum UIIcon { Folder, Text, Image, Book, File, Recent, Settings, Transfer, Library, Wifi, Hotspot, Game, AbbaGo };
 
 // Default theme implementation (Classic Theme)
 // Additional themes can inherit from this and override methods as needed

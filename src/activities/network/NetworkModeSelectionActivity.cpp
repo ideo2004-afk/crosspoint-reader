@@ -5,10 +5,16 @@
 
 #include "MappedInputManager.h"
 #include "components/UITheme.h"
+#include "components/icons/book.h"
+#include "components/icons/game.h"
+#include "components/icons/abba_go.h"
+#include "components/icons/hotspot.h"
+#include "components/icons/library.h"
+#include "components/icons/wifi.h"
 #include "fontIds.h"
 
 namespace {
-constexpr int MENU_ITEM_COUNT = 5;
+constexpr int MENU_ITEM_COUNT = 6;
 }  // namespace
 
 void NetworkModeSelectionActivity::onEnter() {
@@ -38,16 +44,25 @@ void NetworkModeSelectionActivity::loop() {
 
   // Handle confirm button - select current option
   if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
-    if (selectedIndex == 0) {
-      onModeSelected(NetworkMode::JOIN_NETWORK);
-    } else if (selectedIndex == 1) {
-      onModeSelected(NetworkMode::CONNECT_CALIBRE);
-    } else if (selectedIndex == 2) {
-      onModeSelected(NetworkMode::CREATE_HOTSPOT);
-    } else if (selectedIndex == 3) {
-      onFlashcard();
-    } else if (selectedIndex == 4) {
-      onQubic();
+    switch (selectedIndex) {
+      case 0:
+        onModeSelected(NetworkMode::JOIN_NETWORK);
+        break;
+      case 1:
+        onModeSelected(NetworkMode::CONNECT_CALIBRE);
+        break;
+      case 2:
+        onModeSelected(NetworkMode::CREATE_HOTSPOT);
+        break;
+      case 3:
+        onFlashcard();
+        break;
+      case 4:
+        onQubic();
+        break;
+      case 5:
+        onGoToMiniGo();
+        break;
     }
     return;
   }
@@ -78,13 +93,14 @@ void NetworkModeSelectionActivity::render(Activity::RenderLock&&) {
   // Menu items and descriptions
   auto rowTitle = [](int index) {
       static const char* titles[] = {
-          I18N.get(StrId::STR_JOIN_NETWORK),
-          I18N.get(StrId::STR_CALIBRE_WIRELESS),
-          I18N.get(StrId::STR_CREATE_HOTSPOT),
+          tr(STR_JOIN_NETWORK), 
+          tr(STR_CALIBRE_WIRELESS), 
+          tr(STR_CREATE_HOTSPOT),
           "Flashcards",
-          "3D Tic-Tac-Toe"
+          "3D Tic-Tac-Toe",
+          "ABBA Go"
       };
-      return std::string(titles[index]);
+      return titles[index];
   };
 
   auto rowDesc = [](int index) {
@@ -93,20 +109,22 @@ void NetworkModeSelectionActivity::render(Activity::RenderLock&&) {
           I18N.get(StrId::STR_CALIBRE_DESC),
           I18N.get(StrId::STR_HOTSPOT_DESC),
           "Study your flashcards",
-          "3D board game"
+          "3D board game",
+          "Play Mini Go"
       };
       return std::string(descs[index]);
   };
 
   auto rowIcon = [](int index) {
-      static const UIIcon icons[] = {
-          UIIcon::Wifi,
-          UIIcon::Library,
-          UIIcon::Hotspot,
-          UIIcon::Book,
-          UIIcon::Game
-      };
-      return icons[index];
+      switch (index) {
+          case 0: return UIIcon::Wifi;
+          case 1: return UIIcon::Library;
+          case 2: return UIIcon::Hotspot;
+          case 3: return UIIcon::Book;
+          case 4: return UIIcon::Game;
+          case 5: return UIIcon::AbbaGo;
+          default: return UIIcon::Wifi;
+      }
   };
 
   GUI.drawList(renderer, Rect{0, contentTop, pageWidth, contentHeight}, static_cast<int>(MENU_ITEM_COUNT),

@@ -14,6 +14,8 @@
 #include "components/UITheme.h"
 #include "components/icons/book.h"
 #include "components/icons/book24.h"
+#include "components/icons/abba_go.h"
+#include "components/icons/abba_go24.h"
 #include "components/icons/cover.h"
 #include "components/icons/file24.h"
 #include "components/icons/folder.h"
@@ -62,6 +64,8 @@ const uint8_t* LyraTheme::iconForName(UIIcon icon, int size) {
         return File24Icon;
       case UIIcon::Game:
         return Game24Icon;
+      case UIIcon::AbbaGo:
+        return AbbaGo24Icon;
       default:
         return nullptr;
     }
@@ -85,6 +89,8 @@ const uint8_t* LyraTheme::iconForName(UIIcon icon, int size) {
         return HotspotIcon;
       case UIIcon::Game:
         return GameIcon;
+      case UIIcon::AbbaGo:
+        return AbbaGoIcon;
       default:
         return nullptr;
     }
