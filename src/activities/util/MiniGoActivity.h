@@ -32,17 +32,16 @@ class MiniGoActivity final : public Activity {
   bool inEscMenu = false;
   int escMenuIndex = 0; // 0: Resume, 1: size 5, 2: size 7, 3: size 9, 4: Pass, 5: Exit
 
-  bool showColorSelection = true;
-  int colorSelectionIndex = 0; // 0: Black, 1: White
-  MiniGoEngine::Color playerColor = MiniGoEngine::BLACK;
-  MiniGoEngine::Color aiColor = MiniGoEngine::WHITE;
+  MiniGoEngine::Color playerColor = MiniGoEngine::WHITE;
+  MiniGoEngine::Color aiColor = MiniGoEngine::BLACK;
   int aiSimulationsDone = 0;
 
   int aiMumbleIndex = -1;
+  int playerMumbleIndex = -1;
   unsigned long lastMumbleChangeTime = 0;
 
-  bool showHandicapSelection = false;
-  int handicapSelectionIndex = 0; // 0: None, 1: 2 stones, 2: 3 stones, 3: 4 stones
+  bool showHandicapSelection = true;
+  int handicapSelectionIndex = 0; // 0: None, 1: 2, 2: 3, 3: 4, 4: Chaos
   int handicapCount = 0;
 
   float blackScoreCache = 0;
@@ -51,7 +50,6 @@ class MiniGoActivity final : public Activity {
 
   void renderBoard(bool fullRefresh = false);
   void renderEscMenu();
-  void renderColorSelection();
   void renderHandicapSelection();
   bool handleInput();
   void makeAiMove();

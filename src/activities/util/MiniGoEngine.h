@@ -40,6 +40,7 @@ public:
     
     // Scoring
     float calculateScore(Color player) const; // Area scoring
+    float calculateInfluence() const; // For debugging
     
     bool isGameOver() const { return consecutivePasses >= 2; }
     Color getWinner() const;
@@ -68,9 +69,7 @@ private:
     bool shouldStopEarly() const;
     
     // Performance Buffers (Static to class to avoid allocation)
-    mutable bool visitedBuf[81];
-    mutable int stackBuf[81];
-    mutable Color testBoard[81];
+    // removed testBoard, stackBuf, visitedBuf
 
     // MCTS
     struct Node {
