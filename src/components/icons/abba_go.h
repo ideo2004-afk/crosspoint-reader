@@ -1,52 +1,71 @@
 #pragma once
 #include <cstdint>
 
-// ABBA Go Icon 32x32
+// ABBA Go Icon 32x32 - Refined v1.3.0
 // Grid intersections at x=10, 21 and y=10, 21
 static const uint8_t AbbaGoIcon[] = {
-    // y=0-7: Vertical bars at x=10,11 (byte 1 bits 5,4) and x=21,22 (byte 2 bits 2,1)
+    // y=0-6: Vertical bars only
     0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF,
-    0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF,
+    0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF,
     
-    // y=8: Top of 5x5 black stone centered at (21, 10) 
-    // Intersection is y=10. Stone y spans 8,9,10,11,12. x spans 19,20,21,22,23.
-    // byte 2: 19(bit 4), 20(bit 3), 21(bit 2), 22(bit 1), 23(bit 0) -> 0x1F -> bits 4-0 clear -> 0xE0
+    // y=7: Black stone top edge (x: 20-22)
+    // 20(bit 3), 21(2), 22(1) -> 0x0E -> mask ~0x0E = 0xF1
+    0xFF, 0xCF, 0xF1, 0xFF,
+    
+    // y=8: Black stone (x: 19-23)
+    // 19(bit 4), 20(3), 21(2), 22(1), 23(0) -> 0x1F -> mask ~0x1F = 0xE0
     0xFF, 0xCF, 0xE0, 0xFF,
     
-    // y=9: Black stone 5x5
+    // y=9: Black stone (x: 18-24)
+    // byte 2: 18(bit 5), 19(4), 20(3), 21(2), 22(1), 23(0) -> 0x3F -> 0xC0
+    // byte 3: 24(bit 7) -> 0x80 -> 0x7F
+    0xFF, 0xCF, 0xC0, 0x7F,
+    
+    // y=10-11: Horizontal bar (y=10,11) intersected by black stone (x: 18-24)
+    // Grid horizontal bar is 0x00. Stone is solid black (0x00).
+    // Stone x spans 18-24. 
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    
+    // y=12: Black stone (x: 18-24)
+    0xFF, 0xCF, 0xC0, 0x7F,
+    
+    // y=13: Black stone (x: 19-23)
     0xFF, 0xCF, 0xE0, 0xFF,
     
-    // y=10: Horizontal bar intersected by black stone
-    // y=10-11: full black
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    // y=14: Black stone bottom edge (x: 20-22)
+    0xFF, 0xCF, 0xF1, 0xFF,
     
-    // y=12: Bottom of 5x5 black stone
-    0xFF, 0xCF, 0xE0, 0xFF,
-    
-    // y = 13-18: Vertical bars
+    // y = 15-18: Vertical bars
     0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF,
-    0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF,
 
-    // y=19: Top of White stone circle centered at (10, 21)
-    // Intersection is y=21. Stone y spans 19,20,21,22,23. x spans 8,9,10,11,12.
-    // x=8 (byte 1 bit 7), 9(6), 10(5), 11(4), 12(3) -> 0xF8 -> mask 0x07
-    // Outline: x=9,10,11 (bits 6,5,4) -> 0x8F (1000 1111)
-    0xFF, 0x8F, 0xF9, 0xFF,
+    // y=19: White stone top edge (x: 9-11)
+    // Byte 1: 9(bit 6), 10(5), 11(4) -> 0x70 -> inverted mask -> 0x70 (for white)
+    // Empty: 0xCF (1100 1111) -> with white stone: 0x8F (1000 1111) where 9,10,11 are outline/white
+    // Let's draw outline: x=9,11 are black pixels (bits 6,4 = 0). x=10 is white pixel (bit 5 = 1).
+    // byte 1: 1001 1111 (0x9F) for outline.
+    0xFF, 0x9F, 0xF9, 0xFF,
     
-    // y=20: White stone mid
-    // Outline: x=8,12 (bits 7,3) -> 0x77 (0111 0111)
+    // y=20: White stone (x: 8-12)
+    // x=8,12 (bits 7,3) are black outline (0). x=9,10,11 are white (1).
+    // byte 1: 0111 0111 (0x77)
     0xFF, 0x77, 0xF9, 0xFF,
     
-    // y=21-22: Horizontal bar intersected by white stone circle
-    // Intersection is y=21. Stone is at (10,21).
-    // x=8,12 (bits 7,3) are outline. x=9,10,11 (bits 6,5,4) are white (gap in black bar). 
-    // Bar is 0x00, 0x00... byte 1: 0x87 (1000 0111)
-    0xFF, 0x87, 0x00, 0x00, 0xFF, 0x87, 0x00, 0x00,
+    // y=21-22: Horizontal bar intersected by white stone circle (x: 7-13)
+    // Grid bar is black (0x00). White stone (circle) at (10,21).
+    // y=21: x=7,13 are outline (0). x=8,9,10,11,12 are white (1).
+    // byte 0: x=7 is bit 0. byte 1: x=8-12 are bits 7-3. byte 2: x=13 is bit 2.
+    // byte 1 for White: 0xF8 (1111 1000). byte 0 bit 0=0. byte 2 bit 2=0.
+    0xFE, 0xF8, 0xFB, 0x00,
+    0xFE, 0xF8, 0xFB, 0x00,
     
-    // y=23: Bottom of white stone circle
-    0xFF, 0x8F, 0xF9, 0xFF,
+    // y=23: White stone (x: 8-12)
+    0xFF, 0x77, 0xF9, 0xFF,
     
-    // y=24-31: Vertical bars
+    // y=24: White stone bottom edge (x: 9-11)
+    0xFF, 0x9F, 0xF9, 0xFF,
+    
+    // y=25-31: Vertical bars
     0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF,
-    0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF
+    0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF, 0xFF, 0xCF, 0xF9, 0xFF
 };
