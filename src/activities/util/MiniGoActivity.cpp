@@ -76,7 +76,7 @@ MiniGoActivity::MiniGoActivity(GfxRenderer& renderer, MappedInputManager& mapped
 void MiniGoActivity::onEnter() {
   renderer.clearScreen();
   srand(esp_random());
-  boardSize = 7;
+  boardSize = selectedBoardSize;
   engine.reset(boardSize);
   status = Playing;
   cursorX = boardSize / 2;
@@ -109,7 +109,7 @@ void MiniGoActivity::loop() {
         renderBoard(false);
     } else if (aiSimulationsDone < 800) {
         // Run a chunk of simulations
-        int chunk = 40; 
+        int chunk = (boardSize == 9) ? 20 : 40; 
         engine.runMCTSSteps(chunk);
         aiSimulationsDone += chunk;
         
@@ -139,19 +139,34 @@ bool MiniGoActivity::handleInput() {
           if (escMenuIndex == 0) { // Resume
               inEscMenu = false;
               moved = true;
-          } else if (escMenuIndex == 1) { // New Game
+          } else if (escMenuIndex == 1) { // New 7x7
+              selectedBoardSize = 7;
               onEnter();
               return false;
-          } else if (escMenuIndex == 2) { // Pass Turn
+          } else if (escMenuIndex == 2) { // New 9x9
+              selectedBoardSize = 9;
+              onEnter();
+              return false;
+          } else if (escMenuIndex == 3) { // Pass Turn
               engine.makeMove(MiniGoEngine::Move::Pass(), playerColor);
-              isAiThinking = true;
-              aiThinkStartTime = millis();
+              // End game immediately per user request
+              blackScoreCache = engine.calculateScore(MiniGoEngine::BLACK);
+              whiteScoreCache = engine.calculateScore(MiniGoEngine::WHITE);
+              resultsCached = true;
+              status = (blackScoreCache > whiteScoreCache) ? (playerColor == MiniGoEngine::BLACK ? Won : Lost) : (playerColor == MiniGoEngine::WHITE ? Won : Lost);
+              if (blackScoreCache == whiteScoreCache) status = Draw;
               inEscMenu = false;
               moved = true;
-          } else if (escMenuIndex == 3) { // Exit Game
+          } else if (escMenuIndex == 4) { // Exit Game
               onGoBack();
               return true;
           }
+      } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Up) || mappedInput.wasShortPressed(MappedInputManager::Button::Left)) {
+          escMenuIndex = (escMenuIndex > 0) ? escMenuIndex - 1 : 4;
+          moved = true;
+      } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Down) || mappedInput.wasShortPressed(MappedInputManager::Button::Right)) {
+          escMenuIndex = (escMenuIndex < 4) ? escMenuIndex + 1 : 0;
+          moved = true;
       } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Back)) {
           inEscMenu = false;
           moved = true;
@@ -193,21 +208,35 @@ bool MiniGoActivity::handleInput() {
               placeRandomStones(4, MiniGoEngine::BLACK);
               placeRandomStones(2, MiniGoEngine::WHITE);
               
+              // Set last move to the last White stone placed
+              for (int y = 0; y < boardSize; y++) {
+                  for (int x = 0; x < boardSize; x++) {
+                      if (engine.getAt(x, y) == MiniGoEngine::WHITE) {
+                          lastMove = MiniGoEngine::Move::Play(x, y);
+                      }
+                  }
+              }
+              
               isAiThinking = false; // Player (White) moves next
               playerMumbleIndex = rand() % numPlayerMumbles;
           } else {
               // Place AI (Black) handicap stones
-              // Standard 7x7 positions: (2,2), (4,4), (4,2), (2,4)
+              int p1 = 2; // (2,2) for 7x7 and 9x9
+              int p2 = (boardSize == 9) ? 6 : 4; // (6,6) for 9x9, (4,4) for 7x7
               if (handicapCount >= 2) {
-                  engine.makeMove(MiniGoEngine::Move::Play(2, 2), MiniGoEngine::BLACK);
-                  engine.makeMove(MiniGoEngine::Move::Play(4, 4), MiniGoEngine::BLACK);
+                  engine.makeMove(MiniGoEngine::Move::Play(p1, p1), MiniGoEngine::BLACK);
+                  engine.makeMove(MiniGoEngine::Move::Play(p2, p2), MiniGoEngine::BLACK);
               }
               if (handicapCount >= 3) {
-                  engine.makeMove(MiniGoEngine::Move::Play(4, 2), MiniGoEngine::BLACK);
+                  engine.makeMove(MiniGoEngine::Move::Play(p2, p1), MiniGoEngine::BLACK);
               }
               if (handicapCount >= 4) {
-                  engine.makeMove(MiniGoEngine::Move::Play(2, 4), MiniGoEngine::BLACK);
+                  engine.makeMove(MiniGoEngine::Move::Play(p1, p2), MiniGoEngine::BLACK);
               }
+              lastMove = MiniGoEngine::Move::Play(p1, p2); // Mark last handicap stone
+              if (handicapCount == 2) lastMove = MiniGoEngine::Move::Play(p2, p2);
+              if (handicapCount == 3) lastMove = MiniGoEngine::Move::Play(p2, p1);
+              
               // White moves first after handicap
               isAiThinking = false;
               playerMumbleIndex = rand() % numPlayerMumbles;
@@ -364,7 +393,7 @@ void MiniGoActivity::renderBoard(bool fullRefresh) {
   if (status == Playing && !inEscMenu && !showHandicapSelection) {
     int cx = startX + cursorX * cellSize;
     int cy = startY + cursorY * cellSize;
-    renderer.fillRoundedRect(cx - 20, cy - 20, 40, 40, 20, Color::DarkGray);
+    renderer.fillRoundedRect(cx - 10, cy - 10, 20, 20, 10, Color::DarkGray);
     
     // Influence Debug (Black/White Territory Estimate)
     float inf = engine.calculateInfluence();
@@ -439,6 +468,9 @@ void MiniGoActivity::renderBoard(bool fullRefresh) {
           }
       }
   } else if (status == Playing && !inEscMenu && !showHandicapSelection) {
+      if (!isAiThinking && lastMove.pass) {
+          renderer.drawText(UI_12_FONT_ID, 340, 50, "AI PASS!", true, EpdFontFamily::BOLD);
+      }
       renderer.drawText(SMALL_FONT_ID, 340, 80, "Your Turn (White)");
       
       if (playerMumbleIndex >= 0 && playerMumbleIndex < numPlayerMumbles) {
@@ -514,8 +546,8 @@ void MiniGoActivity::renderEscMenu() {
     renderer.drawRoundedRect(mx, my, 340, 400, 2, 10, true);
     
     renderer.drawText(UI_12_FONT_ID, mx + 20, my + 20, "Game Menu", true, EpdFontFamily::BOLD);
-    const char* opts[] = {"Resume", "New Game", "Pass Turn", "Exit Game"};
-    for (int i = 0; i < 4; i++) {
+    const char* opts[] = {"Resume", "New 7x7", "New 9x9", "Pass Turn", "Exit Game"};
+    for (int i = 0; i < 5; i++) {
         int ry = my + 65 + (i * 60);
         if (escMenuIndex == i) renderer.fillRoundedRect(mx + 10, ry - 5, 320, 50, 8, Color::Black);
         renderer.drawText(UI_12_FONT_ID, mx + 20, ry + 12, opts[i], (escMenuIndex != i), EpdFontFamily::REGULAR);

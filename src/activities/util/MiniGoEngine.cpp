@@ -438,8 +438,9 @@ float MiniGoEngine::calculateInfluence(const Color* currentBoard) const {
         }
         
         // Liberty-weighted influence: a stone with more liberties is "stronger"
-        int weight = (liberties >= 3) ? 4 : (liberties == 2 ? 3 : 1);
-        int val = (currentBoard[i] == BLACK) ? weight : -weight;
+        // Toned down based on user feedback to reduce "obsession" with connecting
+        float weight = (liberties >= 3) ? 2.5f : (liberties == 2 ? 1.5f : 1.0f);
+        float val = (currentBoard[i] == BLACK) ? weight : -weight;
         
         influence[i] += val;
         

@@ -18,7 +18,8 @@ class MiniGoActivity final : public Activity {
   
   int cursorX = 0;
   int cursorY = 0;
-  int boardSize = 5;
+  int boardSize = 7;
+  int selectedBoardSize = 7;
   
   bool isAiThinking = false;
   unsigned long aiThinkStartTime = 0;
