@@ -74,15 +74,21 @@ MiniGoActivity::MiniGoActivity(GfxRenderer& renderer, MappedInputManager& mapped
     : Activity("ABBA Go", renderer, mappedInput), onGoBack(onGoBack), engine(7) {}
 
 void MiniGoActivity::onEnter() {
+  resetGame(selectedBoardSize, false);
+}
+
+void MiniGoActivity::resetGame(int size, bool skipSizeSelection) {
   renderer.clearScreen();
   srand(esp_random());
-  boardSize = selectedBoardSize;
+  boardSize = size;
+  selectedBoardSize = size;
   engine.reset(boardSize);
   status = Playing;
   cursorX = boardSize / 2;
   cursorY = boardSize / 2;
   resultsCached = false;
-  showHandicapSelection = true;
+  showSizeSelection = !skipSizeSelection;
+  showHandicapSelection = skipSizeSelection;
   inEscMenu = false;
   isAiThinking = false;
   aiSimulationsDone = 0;
@@ -128,6 +134,27 @@ void MiniGoActivity::loop() {
 bool MiniGoActivity::handleInput() {
   bool moved = false;
   
+  if (showSizeSelection) {
+      if (mappedInput.wasReleased(MappedInputManager::Button::Left) || mappedInput.wasReleased(MappedInputManager::Button::Right)) {
+          sizeSelectionIndex = (sizeSelectionIndex == 0) ? 1 : 0;
+          moved = true;
+      } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Confirm)) {
+          selectedBoardSize = (sizeSelectionIndex == 0) ? 7 : 9;
+          boardSize = selectedBoardSize;
+          engine.reset(boardSize);
+          cursorX = boardSize / 2;
+          cursorY = boardSize / 2;
+          showSizeSelection = false;
+          showHandicapSelection = true;
+          moved = true;
+      } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Back)) {
+          onGoBack();
+          return true;
+      }
+      if (moved) renderBoard(false);
+      return false;
+  }
+
   if (inEscMenu) {
       if (mappedInput.wasReleased(MappedInputManager::Button::Up) || mappedInput.wasReleased(MappedInputManager::Button::Left)) {
           escMenuIndex = (escMenuIndex > 0) ? escMenuIndex - 1 : 3;
@@ -140,12 +167,10 @@ bool MiniGoActivity::handleInput() {
               inEscMenu = false;
               moved = true;
           } else if (escMenuIndex == 1) { // New 7x7
-              selectedBoardSize = 7;
-              onEnter();
+              resetGame(7, true);
               return false;
           } else if (escMenuIndex == 2) { // New 9x9
-              selectedBoardSize = 9;
-              onEnter();
+              resetGame(9, true);
               return false;
           } else if (escMenuIndex == 3) { // Pass Turn
               engine.makeMove(MiniGoEngine::Move::Pass(), playerColor);
@@ -206,6 +231,7 @@ bool MiniGoActivity::handleInput() {
               };
               
               placeRandomStones(4, MiniGoEngine::BLACK);
+              if (boardSize == 9) placeRandomStones(2, MiniGoEngine::BLACK); // 6 total for 9x9
               placeRandomStones(2, MiniGoEngine::WHITE);
               
               // Set last move to the last White stone placed
@@ -241,6 +267,10 @@ bool MiniGoActivity::handleInput() {
               isAiThinking = false;
               playerMumbleIndex = rand() % numPlayerMumbles;
           }
+          moved = true;
+      } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Back)) {
+          showHandicapSelection = false;
+          showSizeSelection = true;
           moved = true;
       }
       if (moved) renderBoard(false);
@@ -497,7 +527,9 @@ void MiniGoActivity::renderBoard(bool fullRefresh) {
       }
   }
 
-  if (showHandicapSelection) {
+  if (showSizeSelection) {
+      renderSizeSelection();
+  } else if (showHandicapSelection) {
       renderHandicapSelection();
   } else if (inEscMenu) {
       renderEscMenu();
@@ -507,6 +539,36 @@ void MiniGoActivity::renderBoard(bool fullRefresh) {
   }
 
   renderer.displayBuffer();
+}
+
+void MiniGoActivity::renderSizeSelection() {
+    int mx = (renderer.getScreenWidth() - 400) / 2;
+    int my = (renderer.getScreenHeight() - 250) / 2;
+    renderer.fillRoundedRect(mx, my, 400, 250, 15, Color::White);
+    renderer.drawRoundedRect(mx, my, 400, 250, 3, 15, true);
+    
+    renderer.drawCenteredText(UI_12_FONT_ID, my + 40, "Select Board Size", true, EpdFontFamily::BOLD);
+    
+    const char* labels[] = {"7 x 7", "9 x 9"};
+    for (int i = 0; i < 2; i++) {
+        int width = 140;
+        int bx = mx + 40 + (i * 180);
+        int by = my + 110;
+        const char* label = labels[i];
+        int textW = renderer.getTextWidth(UI_12_FONT_ID, label);
+        int textX = bx + (width - textW) / 2;
+        int textY = by + (70 - renderer.getLineHeight(UI_12_FONT_ID)) / 2;
+        
+        if (sizeSelectionIndex == i) {
+            renderer.fillRoundedRect(bx, by, width, 70, 15, Color::Black);
+            renderer.drawText(UI_12_FONT_ID, textX, textY, label, Color::White);
+        } else {
+            renderer.drawRoundedRect(bx, by, width, 70, 2, 15, true);
+            renderer.drawText(UI_12_FONT_ID, textX, textY, label, Color::Black);
+        }
+    }
+    const auto l = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_LEFT), tr(STR_DIR_RIGHT));
+    GUI.drawButtonHints(renderer, l.btn1, l.btn2, l.btn3, l.btn4);
 }
 
 void MiniGoActivity::renderHandicapSelection() {

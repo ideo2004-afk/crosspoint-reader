@@ -41,7 +41,9 @@ class MiniGoActivity final : public Activity {
   int playerMumbleIndex = -1;
   unsigned long lastMumbleChangeTime = 0;
 
-  bool showHandicapSelection = true;
+  bool showSizeSelection = true;
+  int sizeSelectionIndex = 0; // 0: 7x7, 1: 9x9
+  bool showHandicapSelection = false;
   int handicapSelectionIndex = 0; // 0: None, 1: 2, 2: 3, 3: 4, 4: Chaos
   int handicapCount = 0;
 
@@ -51,7 +53,9 @@ class MiniGoActivity final : public Activity {
 
   void renderBoard(bool fullRefresh = false);
   void renderEscMenu();
+  void renderSizeSelection();
   void renderHandicapSelection();
   bool handleInput();
+  void resetGame(int size, bool skipSizeSelection);
   void makeAiMove();
 };
