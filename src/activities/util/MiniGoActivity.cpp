@@ -157,10 +157,10 @@ bool MiniGoActivity::handleInput() {
 
   if (inEscMenu) {
       if (mappedInput.wasReleased(MappedInputManager::Button::Up) || mappedInput.wasReleased(MappedInputManager::Button::Left)) {
-          escMenuIndex = (escMenuIndex > 0) ? escMenuIndex - 1 : 3;
+          escMenuIndex = (escMenuIndex > 0) ? escMenuIndex - 1 : 4;
           moved = true;
       } else if (mappedInput.wasReleased(MappedInputManager::Button::Down) || mappedInput.wasReleased(MappedInputManager::Button::Right)) {
-          escMenuIndex = (escMenuIndex < 3) ? escMenuIndex + 1 : 0;
+          escMenuIndex = (escMenuIndex < 4) ? escMenuIndex + 1 : 0;
           moved = true;
       } else if (mappedInput.wasShortPressed(MappedInputManager::Button::Confirm)) {
           if (escMenuIndex == 0) { // Resume
